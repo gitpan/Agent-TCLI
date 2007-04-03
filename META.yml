@@ -1,0 +1,85 @@
+--- #YAML:1.0
+name: Agent-TCLI
+version: 0.02
+author:
+  - Eric Hacker <hacker@cpan.org>
+abstract: Transactional Contextual Line Interface Agent
+license: perl
+resources:
+  license: http://dev.perl.org/licenses/
+requires:
+  Data::Dump: 0
+  Date::Parse: 1.16
+  FormValidator::Simple: 0
+  Getopt::Lucid: 0.16
+  Module::Build: 0
+  Net::Jabber: undef
+  Net::XMPP: 1.02
+  NetAddr::IP: 3
+  Object::InsideOut: 3.07
+  Scalar::Util: 1.18
+  Test::Simple: 0.62
+  YAML::Syck: 0
+provides:
+  Agent::TCLI:
+    file: lib/Agent/TCLI.pm
+    version: 0.02
+  Agent::TCLI::Base:
+    file: lib/Agent/TCLI/Base.pm
+    version: 0.1.0171
+  Agent::TCLI::Command:
+    file: lib/Agent/TCLI/Command.pm
+    version: 0.0.0171
+  Agent::TCLI::Control:
+    file: lib/Agent/TCLI/Control.pm
+    version: 0.0.0168
+  Agent::TCLI::Package::Base:
+    file: lib/Agent/TCLI/Package/Base.pm
+    version: 0.0.0042
+  Agent::TCLI::Package::Tail:
+    file: lib/Agent/TCLI/Package/Tail.pm
+    version: 0.0.0045
+  Agent::TCLI::Package::Tail::Line:
+    file: lib/Agent/TCLI/Package/Tail/Line.pm
+    version: 0.0042
+  Agent::TCLI::Package::Tail::Test:
+    file: lib/Agent/TCLI/Package/Tail/Test.pm
+    version: 0.0042
+  Agent::TCLI::Package::UnixBase:
+    file: lib/Agent/TCLI/Package/UnixBase.pm
+    version: 0.0.0042
+  Agent::TCLI::Package::XMPP:
+    file: lib/Agent/TCLI/Package/XMPP.pm
+    version: 0.0.0042
+  Agent::TCLI::Parameter:
+    file: lib/Agent/TCLI/Parameter.pm
+    version: 0.0.0171
+  Agent::TCLI::Request:
+    file: lib/Agent/TCLI/Request.pm
+    version: 0.0119
+  Agent::TCLI::Response:
+    file: lib/Agent/TCLI/Response.pm
+    version: 0.0119
+  Agent::TCLI::Transport::Base:
+    file: lib/Agent/TCLI/Transport/Base.pm
+    version: 0.0042
+  Agent::TCLI::Transport::Test:
+    file: lib/Agent/TCLI/Transport/Test.pm
+    version: 0.0042
+  Agent::TCLI::Transport::Test::Testee:
+    file: lib/Agent/TCLI/Transport/Test/Testee.pm
+    version: 0.0042
+  Agent::TCLI::Transport::XMPP:
+    file: lib/Agent/TCLI/Transport/XMPP.pm
+    version: 0.0041
+  Agent::TCLI::User:
+    file: lib/Agent/TCLI/User.pm
+    version: 0.0166
+  POE::Component::SimpleLog:
+    file: lib/POE/Component/SimpleLog.pm
+    version: 1.05
+generated_by: Module::Build version 0.2805
+meta-spec:
+  url: |-
+    http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2

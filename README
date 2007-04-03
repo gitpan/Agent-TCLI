@@ -1,0 +1,60 @@
+VetNetSec version 0.0.0
+
+This suite allows one to run tests for Network Security device functionality.
+
+
+INSTALLATION
+
+To install with Module::Build, one can use the following commands:
+
+    perl Build.PL
+    ./Build
+    ./Build test
+    ./Build install
+
+Alternatively, one may load from CPAN, or hopefully a PPM repository.
+
+DEPENDENCIES
+
+		'Data::Dump' 	            => '0',
+		'TimeDate'					=> '1.16',
+		'FormValidator::Simple'		=> '0',
+		'Getopt::Lucid'             => '0.16',
+		'Scalar::List::Utils'        => '1.18',
+		'Module::Build'				=> '0',
+		'Net::Jabber'		        => 'undef',
+		'Net::XMPP'		   	     	=> '1.02',
+		'NetAddr::IP'		        => '3',
+		'Object::InsideOut'			=> '3.07',
+		'Test::Simple'              => '0.62',
+		'YAML::Syck'				=> '0'
+
+There are a few buggy perl modules that have fixed versions shipped with
+this collection. No response from the authors to queries has been received.
+	Net::XMPP::Protocol -> Changed, fixed verson on on CPAN and required.
+	POE::Componenent::SimpleLog -> has a bug which would seriously impact performance
+
+USING
+
+Passive Bots:
+One creates a script, see ex/eliza.pl or ex/attack.pl, that loads up a TCLI
+transport with users, packages and other pertinent information.
+The bot will log in, join chatrooms if in the user list,
+and wait for further commands from authorized users or in a chatroom.
+
+Test script:
+A test script is written, see ex/target.pl, that loads up a Test Transport,
+other necessary transports, necessary local packages, and testees.
+
+Using testees, one creates tests ala Test::More with the is_code or like_body
+tests. These may run asynchronously after the testing starts.
+
+It is necessary to call the test_master->run at the end of the test to ensure
+that all tests have completed.
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2007, Alcatel-Lucent
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
