@@ -1,5 +1,19 @@
 Revision history for Agent-TCLI
 
+0.03	Mon Apr 30 01:49:10 EST 2007
+	- Added working Agent script to bin
+	- Fixed up the POD docs a bunch.
+	- Added more support for running external commands
+	- Removed some cruft
+	- Fixed lots of little bugs
+	- Moved Testee, which breaks tests in dependent distributions
+	- Cleaned up version numbers and Id fields
+	- Removed dependency on PoCo::SimpleLog for Package::Tail
+	- Fixed bug in Package::Base with scalar defaults
+	- Fixed the way required Parameters work in Commands
+	- Made Control's Session heap refer to the Control.
+		Enabling easier access in commands through $sender->get_heap
+
 0.02	Mon Apr  2 18:48:44 EST 2007
 		First CPAN release
 

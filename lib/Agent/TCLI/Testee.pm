@@ -1,39 +1,39 @@
-# $Id: Testee.pm 42 2007-04-02 20:20:14Z hacker $
-package Agent::TCLI::Transport::Test::Testee;
+# $Id: Testee.pm 53 2007-04-26 13:43:18Z hacker $
+package Agent::TCLI::Testee;
 
 =pod
 
 =head1 NAME
 
-Agent::TCLI::Transport::Test::Testee - Write Test scripts to control TCLI agents.
+Agent::TCLI::Testee - Write Test scripts to control TCLI agents.
 
 =head1 SYNOPSIS
 
-use Test::More qw(no_plan);
-use Agent::TCLI::Transport::Test;
-use Agent::TCLI::Transport::Test::Testee;
+	use Test::More qw(no_plan);
+	use Agent::TCLI::Transport::Test;
+	use Agent::TCLI::Testee;
 
-use_ok('Agent::TCLI::Package::Eliza');
+	use_ok('Agent::TCLI::Package::Eliza');
 
-my $test1 = Agent::TCLI::Package::Eliza->new({
+	my $test1 = Agent::TCLI::Package::Eliza->new({
+		});
+
+	my $test_master = Agent::TCLI::Transport::Test->new({
+    	'control_options'	=> {
+		    'packages' 	=> [ $test1, ],
+    	},
 	});
 
-my $test_master = Agent::TCLI::Transport::Test->new({
-    'control_options'	=> {
-	     'packages' 	=> [ $test1, ],
-    },
-});
+	my $eliza = Agent::TCLI::Testee->new(
+		'test_master'	=> $test_master,
+		'addressee'		=> 'self',
+	);
 
-my $eliza = Agent::TCLI::Transport::Test::Testee->new(
-	'test_master'	=> $test_master,
-	'addressee'		=> 'self',
-);
-
-$eliza->is_body( 'eliza','Context now: eliza', 'Start up eliza');
-$eliza->like_body( 'hello', qr(problem), 'eliza chat begins');
-$eliza->is_code( 'You are not really a therapist.',200, 'chat');
-$eliza->is_code( 'Do you have malpractice insurance?',200, 'chat');
-$eliza->like_body( '/exit',qr(Context now: ), "Exit ok");
+	$eliza->is_body( 'eliza','Context now: eliza', 'Start up eliza');
+	$eliza->like_body( 'hello', qr(problem), 'eliza chat begins');
+	$eliza->is_code( 'You are not really a therapist.',200, 'chat');
+	$eliza->is_code( 'Do you have malpractice insurance?',200, 'chat');
+	$eliza->like_body( '/exit',qr(Context now: ), "Exit ok");
 
 =head1 DESCRIPTION
 
@@ -69,13 +69,13 @@ The parameters for mosts tests are:
 
 Thus the complete test looks like:
 
-$testee->is_code("status", 200,"status ok");
+	$testee->is_code("status", 200,"status ok");
 
 The ok and not_ok tests check if the response code falls within a range of
 values indicating success or failure, repsectively. One does not need to supply
 an expected response code value with these tests.
 
-$testee->ok("status","status ok");
+	$testee->ok("status","status ok");
 
 There are times when a single request may elicit multiple responses. One can use
 a blank request to add tests for additional responses to the prior request. One cannot
@@ -129,7 +129,9 @@ unique. Each of the tests below return the id for the request, though normally
 one does not need to capture the id. The id is necessary to get parameters
 from a response or get the full set of responses.
 
-=head1 ATTRIBUTES
+=head1 INTERFACE
+
+=head2 ATTRIBUTES
 
 These attrbiutes are used to set up the testee with new. Changing them
 afterwords is allowed, but unsupported, and may be restricted in the future.
@@ -142,18 +144,19 @@ use strict;
 use vars qw($VERSION @EXPORT %EXPORT_TAGS );
 
 use Carp;
-#use Time::HiRes qw(time);
 
 use POE;
 use Agent::TCLI::User;
 require Agent::TCLI::Request;
 use Test::Builder::Module;
 
-use Object::InsideOut qw( Agent::TCLI::Base Test::Builder::Module);
+use Object::InsideOut qw( Agent::TCLI::Base );
 
-our $VERSION = '0.'.sprintf "%04d", (qw($Id: Testee.pm 42 2007-04-02 20:20:14Z hacker $))[2];
+our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Testee.pm 53 2007-04-26 13:43:18Z hacker $))[2];
 
-=head3 test_master
+=over
+
+=item test_master
 
 The Transport::Test object that will be coordinating the tests
 B<test_master> will only contain Agent::TCLI::Transport::Test values.
@@ -163,7 +166,7 @@ my @test_master		:Field
 					:Type('Agent::TCLI::Transport::Test')
 					:All('test_master');
 
-=head3 transport
+=item transport
 
 The POE alias of the transport that will deliver the request. Typically
 this is 'transport_I<protocol>' where I<protocol> is the lower case protocol
@@ -174,7 +177,7 @@ B<transport> should only contain scalar values.
 my @transport		:Field
 #					:Type('scalar')
 					:All('transport');
-=head3 protocol
+=item protocol
 
 The protocol to use to deliver the request. The transport must be prepared
 to handle this protocol.
@@ -185,7 +188,7 @@ my @protocol		:Field
 #					:Type('scalar')
 					:All('protocol');
 
-=head3 addressee
+=item addressee
 
 The addressee of the reuqest in a format that the protocol can understand
 B<addressee> should only contain scalar values.
@@ -197,12 +200,15 @@ my @addressee		:Field
 					:Acc('addressee');
 
 # Standard class utils are inherited
+=back
 
 =head2 METHODS
 
-=head3 new
+=over
 
-	Agent::TCLI::Transport::Test::Testee->new({
+=item new
+
+	Agent::TCLI::Testee->new({
 		'test_master'	=> # A Agent::TCLI::Transport::Test object.
 		'addressee'		=> # The name of the addressee
 		'transport'		=> # The default POE Session alias
@@ -215,20 +221,24 @@ my @addressee		:Field
 	See the Attributes for more information on what each one does.
 	I<verbose> and I<do_verbose> are inherited from Agent::TCLI::Base;
 
+=back
+
 =head2 Test names
 
-All test functions take a name argument exactly as described in Test::More.
+All test functions take a test_name argument exactly as described in Test::More.
 It will default to the request input unless it is defined. To submit
-a test with no name, explicitly use an empty string as the name.
+a test with no name, explicitly use an empty string as the test_name.
 
-=head3 ok / is_success
+=over
+
+=item ok / is_success
 
   ok ( 'some request', <test_name> );
 
 ok() makes a request of the testee and passes if the response
 has a code indicating success. ok is really just an alias for is_success
-and they can be used interchangably. Ir the test fails, the response body
-will be output with the diagnistics.
+and they can be used interchangably. If the test fails, the response body
+will be output with the diagnostics.
 
 =cut
 
@@ -252,14 +262,14 @@ sub are_successes {
 	);
 }
 
-=head3 not_ok / is_error
+=item not_ok / is_error
 
   not_ok ( 'some request', <test_name> );
 
-ok() makes a request of the testee and passes if the response
+not_ok() makes a request of the testee and passes if the response
 has a code indicating failure. not_ok is really just an alias for is_error
-and they can be used interchangably. Ir the test fails, the response body
-will be output with the diagnistics.
+and they can be used interchangably. If the test fails, the response body
+will be output with the diagnostics.
 
 =cut
 
@@ -283,10 +293,9 @@ sub are_errors {
 	);
 }
 
+=item is_body
 
-=head3 is_body
-
-  is_body ( 'some request', 'expected response', $test_name );
+  is_body ( 'some request', 'expected response', <test_name> );
 
 is_body() makes a request of the testee and compares the response
 with the expected response to see if the test passed or failed. As with
@@ -314,9 +323,9 @@ sub are_bodies {
 	);
 }
 
-=head3 is_code
+=item is_code
 
-  is_code ( 'some request', RESPONSE_CODE , $test_name );
+  is_code ( 'some request', RESPONSE_CODE , <test_name> );
 
 is_code() makes a request of the testee and compares the response code
 with the expected response code numerically to see if the test passed
@@ -341,9 +350,9 @@ sub are_codes {
 	);
 }
 
-=head3 like_body
+=item like_body
 
-$testee->like_body ( 'some request', qr(expected) , $test_name );
+$testee->like_body ( 'some request', qr(expected) , <test_name> );
 
 like_body() makes a request of the testee and compares the response
 with the supplied regular expression to see if the test passed or failed. As with
@@ -368,9 +377,9 @@ sub like_bodies {
 	);
 }
 
-=head3 unlike_body
+=item unlike_body
 
-$testee->unlike_body ( 'some request', qr(expected) , $test_name );
+$testee->unlike_body ( 'some request', qr(expected) , <test_name> );
 
 unlike_body() works as like_body above except it passes if response
 does not match the regex.
@@ -393,9 +402,9 @@ sub unlike_bodies {
 	);
 }
 
-=head3 like_code
+=item like_code
 
-  like_code ( 'some request', qr(CODE) , $test_name );
+  like_code ( 'some request', qr(CODE) , <test_name> );
 
 like_code() makes a request of the testee and compares the response code
 with the supplied regular expression to see if the test passed or failed.
@@ -421,9 +430,9 @@ sub like_codes {
 	);
 }
 
-=head3 unlike_code
+=item unlike_code
 
-  unlike_code ( 'some request', qr(CODE) , $test_name );
+  unlike_code ( 'some request', qr(CODE) , <test_name> );
 
 unlike_code() works as like_code above except it passes if response
 does not match the regex.
@@ -462,8 +471,7 @@ sub get_responses {
 	);
 }
 
-
-=head3 preinit
+=item preinit
 
 This private Object::InsideOut (OIO) method is used for object initialization.
 
@@ -476,7 +484,7 @@ sub preinit :PreInit {
 
 }
 
-=head3 spawn
+=item spawn
 
 This private OIO method is used for object initialization.
 
@@ -489,10 +497,10 @@ sub spawn :Init {
 
 }
 
-
 1;
 
 #__END__
+=back
 
 =head3 INHERITED METHODS
 
@@ -507,7 +515,7 @@ Eric Hacker	 E<lt>hacker at cpan.orgE<gt>
 =head1 BUGS
 
 There is no separation between users running tests, which means it
-could be very ugly to have multiple users try to run tests on one TCLI bot.
+could be very ugly to have multiple users try to run tests on one TCLI Agent.
 
 Test scripts not thorough enough.
 
@@ -515,7 +523,7 @@ Probably many others.
 
 =head1 LICENSE
 
-Copyright (c) 2006, Alcatel Lucent, All rights resevred.
+Copyright (c) 2007, Alcatel Lucent, All rights resevred.
 
 This package is free software; you may redistribute it
 and/or modify it under the same terms as Perl itself.

@@ -1,15 +1,15 @@
-# $Id: Base.pm 42 2007-04-02 20:20:14Z hacker $
+# $Id: Base.pm 57 2007-04-30 11:07:22Z hacker $
 package Agent::TCLI::Transport::Base;
 
 =pod
 
 =head1 NAME
 
-Agent::TCLI::Transport::Test - transport for testing commands
+Agent::TCLI::Transport::Base - Base Class for transports
 
 =head1 SYNOPSIS
 
-todo
+Use as a base class for a Agent::TCLI::Transport
 
 =head1 DESCRIPTION
 
@@ -18,28 +18,6 @@ todo
 =back
 
 =head1 GETTING STARTED
-
-=head2 DEFINING COMMANDS
-
-=over 4
-
-=item * args
-
-=back
-
-=head2 LAUNCHING THE CONTROL
-
-=over 4
-
-=item * commands
-
-=item * hostname
-
-=item * appname
-
-=back
-
-=head2 SHUTTING DOWN
 
 =cut
 
@@ -58,14 +36,17 @@ use Object::InsideOut qw( Agent::TCLI::Base );
 use Data::Dump qw(pp);
 use YAML qw(freeze thaw);
 
-#use Params::Validate qw(validate_with);
+our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Base.pm 57 2007-04-30 11:07:22Z hacker $))[2];
 
-#use Sys::Hostname;
-#use File::Basename;
+=head2 ATTRIBUTES
 
-our $VERSION = '0.'.sprintf "%04d", (qw($Id: Base.pm 42 2007-04-02 20:20:14Z hacker $))[2];
+The following attributes may be accessed through a combined mutator.
+If the attribute is an array type, then additional array mutators are
+available and described below.
 
-=head3 controls
+=over
+
+=item controls
 
 A hash of the active controls
 B<controls> will only accept hash objects.
@@ -75,7 +56,7 @@ my @controls 	:Field
 				:All('controls')
 				:Type('hash');
 
-=head3 alias
+=item alias
 
 An alias that the session will be run under. Alias can't be
 changed after starting.
@@ -84,7 +65,7 @@ changed after starting.
 my @alias		:Field
 				:Get('alias');
 
-=head3 peers
+=item peers
 
 An array of peers
 B<set_peers> will only accept ARRAYREF type values.
@@ -102,7 +83,7 @@ my @session		:Field
 				:Get('session')
 				:Weak;
 
-=head3 control_options
+=item control_options
 
 A hash of options to pass to a new control object. These are passed
 straight through as is. See Agent::TCLI::Control for information
@@ -116,6 +97,18 @@ my @control_options	:Field
 
 # Standard class utils are inherited
 
+=item Arrays
+
+Attributes that are typed as arrays also support the following mutators for
+the lazy:
+B<shift_&gt;field&lt;> - works the same as I<shift>, returing the shifted member.
+B<unshift_&gt;field&lt;(list)> - works the same as I<unshift>.
+B<pop_&gt;field&lt;> - works the same as I<pop>, returing the popped member.
+B<push_&gt;field&lt;(list)> - works the same as I<push>.
+B<depth_&gt;field&lt;> - returns the curent size of the array.
+
+=cut
+
 my %init_args :InitArgs = (
     'alias' => {
         'Default'		=> 'base',
@@ -123,45 +116,41 @@ my %init_args :InitArgs = (
     },
 );
 
-#u_ subs can't be private if used in %init_args
-#named u_ to sort nicer in Eclipse
-sub u_is_text {
-	return (
-		 validate_pos( @_, { type => Params::Validate::SCALAR | Params::Validate::SCALARREF } )
-		 )
-}
-sub u_is_num {
-	return (
-		 Scalar::Utils->looks_like_number($_[0])
-		 )
-}
-sub u_is_int {
-         my $arg = $_[0];
-         return (Scalar::Util::looks_like_number($arg) &&
-                 (int($arg) == $arg));
-     }
+##u_ subs can't be private if used in %init_args
+##named u_ to sort nicer in Eclipse
+#sub u_is_text {
+#	return (
+#		 validate_pos( @_, { type => Params::Validate::SCALAR | Params::Validate::SCALARREF } )
+#		 )
+#}
+#sub u_is_num {
+#	return (
+#		 Scalar::Utils->looks_like_number($_[0])
+#		 )
+#}
+#sub u_is_int {
+#         my $arg = $_[0];
+#         return (Scalar::Util::looks_like_number($arg) &&
+#                 (int($arg) == $arg));
+#     }
 
-sub spawn :Init {
+=back
+
+=head2 METHODS
+
+These methods may be used as is, or subclasses may use them as
+starting point.
+
+=over
+
+=cut
+
+sub _init :Init {
 	my ($self, $args) = @_;
 
-#   Example simple session creation.
-#	$self->set(\@session, POE::Session->create(
-#        object_states => [
-#        	$self => [ qw(
-#	            _start
-#            	_stop
-#        	    _shutdown
-#
-#				SendRequest
-#				SendResponse
-#        	    SendChangeContext
-#
-#        	)],
-#        ],
-#   ));
 }
 
-=head2 _start
+=item _start
 
 Get things rolling.
 
@@ -186,7 +175,7 @@ sub _start :Cumulative {
 
 } # End sub start
 
-=head2 _stop
+=item _stop
 
 Mostly just a placeholder.
 
@@ -195,21 +184,23 @@ Mostly just a placeholder.
 sub _stop :Cumulative {
   my ($kernel,  $self, $session) =
     @_[KERNEL, OBJECT,  SESSION];
-    $self->Verbose("\n Socketfactory stopping \n\n" ,1);
+    $self->Verbose("stop: ".$self->name." stopping " ,1);
 }
 
-=head2 _child
+=item _child
 
 Just a placeholder.
 
 =cut
 
 sub _child {
-  my ($kernel,  $self, $session) =
-    @_[KERNEL, OBJECT,  SESSION];
+  my ($kernel,  $self, $session, $id, $error) =
+    @_[KERNEL, OBJECT,  SESSION, ARG1, ARG2 ];
+
+   $self->Verbose("child: id($id) error($error)") if (defined($error));
 }
 
-=head2 _shutdown
+=item _shutdown
 
 Forcibly shutdown
 
@@ -239,7 +230,7 @@ sub _shutdown :Cumulative {
     return("_shutdown ".$self->alias  );
 }
 
-=head2 PackRequest
+=item PackRequest
 
 This object method is used by transports to prepare a request for transmssion.
 
@@ -262,15 +253,13 @@ sub PackRequest {
 	return($packed_request);
 }
 
-=head2 PackResponse
+=item PackResponse
 
 This object method is used by transports to prepare a reseponse for transmssion.
 See PackRequest for more details.
 
 =cut
 
-#hmmm, right now there is no difference between PackRequest and PackResponse.
-# I could typeglob it, but I think that will change soon.
 sub PackResponse {
 	my ($self, $response) = @_;
 	my $dump = $response->dump();
@@ -283,7 +272,7 @@ sub PackResponse {
 	return($packed_response);
 }
 
-=head2 UnackRequest
+=item UnpackRequest
 
 This object method is used by transports to unpack a request from transmssion.
 See PackRequest for more details.
@@ -324,7 +313,7 @@ sub UnpackRequest {
 	return($request);
 }
 
-=head2 UnackResponse
+=item UnpackResponse
 
 This object method is used by transports to unpack a reseponse from transmssion.
 See PackRequest for more details.
@@ -365,55 +354,13 @@ sub UnpackResponse {
 	return($response);
 }
 
-#sub SendResponse {
-#	my ($kernel,  $self, $sender, $response) =
-#  	  @_[KERNEL, OBJECT,  SENDER,      ARG1];
-#	$self->Verbose("SendResponse: sender(".$sender.") Code(".$response->code.") \n");
-#
-#	my $request = $response->request;
-#
-#	# a good place to put response info is in the request.
-#
-#	# Should I just forward this on to a receive respose reoutine?
-#	# Since this is local, and then it could be compatible
-#	# with distributed testing?
-#
-#
-#}
-#
-#sub SendChangeContext {
-#	my ($kernel,  $self, $control ) =
-#	  @_[KERNEL, OBJECT,    ARG0 ];
-#	$self->Verbose("SendChangeContext: for control".$control->id());
-#	# Context is in the control.....
-#
-#}
-#
-#sub GetRequestForInput {
-#	my ($self,  $input ) = @_;
-#	# This is used to package up a simple request easily
-#
-#	my $request = Agent::TCLI::Request->new({
-#					'sender'	=> $self->alias,
-#					'postback'	=> 'PostResponse',
-#					'input'		=> $input,
-#	});
-#
-#	return($request);
-#
-#}
+=item authorized ( { parameters (see usage) } )
 
-=head2 not_authorized ( { parameters (see usage) } )
+Checks to see if a id is authorized to use us.
 
-Checks to see if a id is authorized to use the transport.
+Usage
 
-=head3 Description
-
-TODO
-
-=head3 Usage
-
-$self->not_authorized (
+$self->authorized (
 		user@example.com,
 		qr(master|writer),  # optional regex for auth
 		qr(xmpp),			# optional regex for protocol
@@ -421,11 +368,11 @@ $self->not_authorized (
 
 =cut
 
-sub not_authorized {
+sub authorized {
 	my ($self, $id, $auth, $protocol) = @_;
 	$auth = defined($auth) ? $auth : qr(.*);
 	$protocol = defined($protocol) ? $protocol : qr(.*);
-	$self->Verbose("not_authorized: id(".$id.") auth($auth) protocol($protocol)",2);
+	$self->Verbose("authorized: id(".$id.") auth($auth) protocol($protocol)",2);
 
 	# create a blank user as kludge to simply debugging output.
 	# This might be a slow memory exhaustion for lots of auth checks
@@ -459,11 +406,30 @@ sub not_authorized {
 		}
 	} #end foreach peer
 
-	$self->Verbose("not_authorized:  ".$id." auth check got ".
+	$self->Verbose("authorized:  ".$id." auth check got ".
 		$authorized->id()." \n",1);
 
 	return ($authorized)
-} # End not_authorized
+} # End authorized
+
+=item GetControl( <control_id>, <user>, <user_protocol>, [ <user_auth> ] )
+
+GetControl returns a control object for a control_id / user combination.
+It will return either an existing control or create a new one. All
+requests for a control are authenticated. Thus when a Transport recieves
+a new request, user priviledges are rechecked against the latest database
+if GetControl is used to obtain the Control.
+
+The control_id is a unique ID for the transport to use to identify the control.
+This is useful in situations where a user may have more than one control
+active at a time.
+The user must be a Agent::TCLI::User object. The protocol should be one
+that the Transport supports and will be matched for authentication.
+A transport may optionally override the user_auth level. This would be best
+used to drop to a read only transport, but currently the direction is not
+enforced.
+
+=cut
 
 sub GetControl {
 	my ($self, $control_id, $user, $user_protocol, $user_auth ) = @_;
@@ -471,7 +437,7 @@ sub GetControl {
 
 	my $user_id = ref($user) =~ /User/i ? $user->id : $user;
 
-	my $auth_user = $self->not_authorized (
+	my $auth_user = $self->authorized (
 	  	$user_id,
 	  	qr(.*),
 	  	$user_protocol,
@@ -509,6 +475,14 @@ sub GetControl {
 
 } # End GetControl
 
+=item DeleteControl ( <control_id> )
+
+DeleteControl will remove a reference to Control from the transport.
+This does not shutdown the Control's POE session, but will allow
+it to stop if there are no other existing references.
+
+=cut
+
 sub DeleteControl {
 	my ($self, $control_id ) = @_;
 	$self->Verbose($self->alias.":GetControl: id(".$control_id.") \n");
@@ -527,8 +501,7 @@ sub DeleteControl {
 
 } # End DeleteControl
 
-
-=head3 Set
+=item Set
 
 This POE event handler is may be used by a Transport to enable a Package
 to set attributes in the Transport. It currently is not filtering
@@ -578,7 +551,7 @@ sub Set {
 	}
 }
 
-=head3 Show
+=item Show
 
 This POE event handler is may be used by a Transport to enable a Package
 to show current settings in the Transport. It currently is not filtering
@@ -649,7 +622,7 @@ sub Show {
 	# What do we do if there is no request?
 }
 
-=head3 _default
+=item _default
 
 This POE event handler is used to catch wayard calls to unavailable states. If
 verbose is on, it makes it rather obvious in the logs that an event was not
@@ -681,9 +654,11 @@ sub _default {
 
 #__END__
 
+=back
+
 =head1 AUTHOR
 
-Eric Hacker	 E<lt>hacker at cpan.orgE<gt>
+Eric Hacker	 hacker can be emailed at cpan.org
 
 =head1 BUGS
 

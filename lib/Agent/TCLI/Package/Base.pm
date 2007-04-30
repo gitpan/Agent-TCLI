@@ -1,14 +1,10 @@
 package Agent::TCLI::Package::Base;
 #
-# $Id: Base.pm 42 2007-04-02 20:20:14Z hacker $
+# $Id: Base.pm 57 2007-04-30 11:07:22Z hacker $
 #
 =head1 NAME
 
 Agent::TCLI::Package::Base - Base object for other Agent::TCLI::Package objects
-
-=head1 VERSION
-
-This document describes Agent::TCLI::Package::Base version 0.0.1
 
 =head1 SYNOPSIS
 
@@ -18,10 +14,10 @@ Library will not recognize any class extension without also being modified.
 
 =head1 DESCRIPTION
 
-
+This needs much more elaboration. For now, please use the source
+of existing command packages. I apologize for the inconvenience.
 
 =head1 INTERFACE
-
 
 =cut
 
@@ -34,28 +30,33 @@ use POE;
 use Scalar::Util  qw(blessed looks_like_number);
 use Getopt::Lucid;
 use YAML::Syck;
+use XML::Simple;
+use File::ShareDir;
 #use FormValidator::Simple;
 
+$YAML::Syck::Headless = 1;
+$YAML::Syck::SortKeys = 1;
 
-our $VERSION = '0.0.'.sprintf "%04d", (qw($Id: Base.pm 42 2007-04-02 20:20:14Z hacker $))[2];
+our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Base.pm 57 2007-04-30 11:07:22Z hacker $))[2];
 
 =head2 ATTRIBUTES
 
 The following attributes are accessible through standard accessor/mutator
 methods unless otherwise noted
 
+=over
 
-=head3 name
+=item name
 
 The name of the package. This is the word that is used to refer to the package POE::Session.
-B<set_name> should only be SCALAR type values.
+B<name> should only contain SCALAR type values.
 
 =cut
 my @name		:Field
 				:Arg('name'=>'name','default'=>'base')
 				:Acc('name');
 
-=head3 commands
+=item commands
 
 An array of the command objects in this package.
 
@@ -65,11 +66,11 @@ my @commands	:Field
 				:Get('commands')
 				:Type('HASH');
 
-=head3 parameters
+=item parameters
 
 A hash of the parameters used in this package. Often parameters are shared
-accross individual commands, so they are defined here. They are refered to
-by each command in the package.
+accross individual commands, so they are defined within the Package.
+They are refered to by each command in the package.
 B<parameters> should only contain hash values.
 
 =cut
@@ -83,42 +84,14 @@ my @session 	:Field
 				:Weak;
 #				:Type('POE::Session');
 
-#=head3 opt
-#
-#An internal object for holding optional parameters. Defaults to Getopt::Lucid to process parameters
-#B<opt> will only accept Getopt::Lucid types.
-#
-#=cut
-#my @opt			:Field
-#				:All('opt');
-##				:Type('Getopt::Lucid');
-
-#=head3 opt_args
-#
-#An array of the args passed in with a command for processing by Getopt::Lucid
-#B<opt_args> will only accept ARRAY type values.
-#
-#=cut
-#my @opt_args	:Field
-#				:All('opt_args')
-#				:Type('ARRAY');
-
-=head3 controls
+=item controls
 
 A hash of hashes keyed on control for storing stuff.
 
 =cut
 my @controls		:Field;
 
-#=head3 wheels
-#
-#A hash of wheels keyed on wheel ID.
-#B<wheels> will only accept type type values.
-#
-#=cut
-#my @wheels			:Field;
-
-=head3 requests
+=item requests
 
 A hash collection of requests that are in progress
 
@@ -128,7 +101,7 @@ my @requests		:Field
 					:Arg('name' => 'requests', 'default' => { } )
 					:Acc('requests');
 
-=head3 wheels
+=item wheels
 
 A hash of wheels keyed on wheel ID.
 B<wheels> values should only be POE::Wheels.
@@ -140,12 +113,16 @@ my @wheels			:Field;
 
 # Standard class utils are inherited
 
+=back
+
 =head2 METHODS
 
 Most of these methods are for internal use within the TCLI system and may
 be of interest only to developers trying to enhance TCLI.
 
-=head3 start
+=over
+
+=item _start
 
 This POE event handler is called when POE starts up a Package.
 The B<_start> method is :Cumulative within OIO. Ideally, most command packages
@@ -193,7 +170,7 @@ sub _start :Cumulative {
     $kernel->alias_set($self->name);
 }
 
-=head3 _shutdown
+=item _shutdown
 
 This POE event handler is used to initiate a shutdown of the Package.
 The B<_shutdown> method is :Cumulative within OIO. Most command packages
@@ -222,7 +199,7 @@ sub _shutdown :Cumulative {
     return ("_shutdown:base ".$self->name )
 }
 
-=head3 _stop
+=item _stop
 
 This POE event handler is called when POE stops a Package.
 The B<_stop> method is :Cumulative within OIO.
@@ -238,18 +215,20 @@ sub _stop :Cumulative {
 	return($self->name.":_stop complete ");
 }
 
-=head2 _child
+=item _child
 
 Just a placeholder that does nothing but collect unhandled child events to keep them out of default.
 
 =cut
 
 sub _child {
-#  my ($kernel,  $self, $session) =
-#    @_[KERNEL, OBJECT,  SESSION];
+  my ($kernel,  $self, $session, $id, $error) =
+    @_[KERNEL, OBJECT,  SESSION, ARG1, ARG2 ];
+
+   $self->Verbose("child: pid($id) ");
 }
 
-=head2 establish_context
+=item establish_context
 
 This POE event handler is the primary way to set context with a command.
 Just about any command that has subcommands will use this method as it's handler.
@@ -289,7 +268,7 @@ sub establish_context {
 
 }
 
-=head2 show
+=item show
 
 This POE event handler is the default show for packages.
 It will accept an argument for the setting to show. It will also take an
@@ -456,7 +435,7 @@ sub show {
 	$request->Respond($kernel, $txt, $code);
 }
 
-=head3 settings
+=item settings
 
 This POE event handler executes the set commands.
 
@@ -634,8 +613,15 @@ sub GetWheelKey {
 
 sub SetWheelKey {
 	my ($self, $wheel, $key, $value) = @_;
-	$wheels[$$self]->{$wheel->ID}{$key} = $value;
-	return
+	if ( ref($wheel) =~ /POE::Wheel/ )
+	{
+		$wheels[$$self]->{$wheel->ID}{$key} = $value;
+	}
+	else
+	{
+		$wheels[$$self]->{$wheel}{$key} = $value;
+	}
+	return 1;
 }
 
 
@@ -830,6 +816,52 @@ sub LoadYaml {
 	return 1;
 }
 
+sub LoadXMLFile {
+	my ($self, $xml_file) = @_;
+	$self->Verbose("LoadXmlFile: Loading" );
+
+	my $class = ref($self) || $self;
+
+	$xml_file = File::ShareDir::module_file($class,'config.xml')
+		unless defined($xml_file);
+
+	# hmmm, should trap for errors someday.
+	my $loadees = XMLin($xml_file,
+		KeyAttr 	=> [],
+		SearchPath 	=> \@INC,
+	);
+
+	$self->Verbose("LoadYaml: Loadees dump",3,\$loadees );
+
+	# We can only handle an array of loadees.
+	foreach my $loadee ( @{$loadees->{'Parameter'} } )
+	{
+		if ( ref($loadee) ne 'HASH' )
+		{
+			$self->Verbose("LoadXMLFile: Bad xml, Parameter not a hash",0);
+			return;
+		}
+		else
+		{
+			$self->AddParameter('Agent::TCLI::Parameter',$loadee);
+		}
+	}
+	foreach my $loadee ( @{$loadees->{'Command'} } )
+	{
+		if ( ref($loadee) ne 'HASH' )
+		{
+			$self->Verbose("LoadXMLFile: Bad xml, Command not a hash",0);
+			return;
+		}
+		else
+		{
+			$self->AddCommand('Agent::TCLI::Command',$loadee);
+		}
+	}
+	return 1;
+}
+
+
 sub AddParameter {
 	my ($self, $object, $args) = @_;
     my $class = ref($self) || $self;
@@ -859,7 +891,7 @@ sub AddParameter {
 		my $arg;
 		if (exists($args->{'default'}))
 		{
-			$arg = ":Arg('name'=>'$name', 'default'=> $args->{'default'}) ";
+			$arg = ":Arg('name'=>'$name', 'default'=> '$args->{'default'}') ";
 		}
 		else
 		{
@@ -891,14 +923,14 @@ sub AddCommand {
 	}
 
 	$self->Verbose("AddCommand: adding $name ");
-	$self->Verbose("AddCommand: adding $name args dump ",1,$args);
+	$self->Verbose("AddCommand: adding $name args dump ",3,$args);
     $commands[$$self]{ $name } = $object->new(
     	'verbose' 		=> $self->verbose,
     	'do_verbose' 	=> $self->do_verbose,
     	$args,
     	);
 
-	$self->Verbose("AddCommand: adding $name command dump ".$commands[$$self]{ $name }->dump(1),1);
+	$self->Verbose("AddCommand: adding $name command dump ".$commands[$$self]{ $name }->dump(1),3);
 
 	# Parameters were just stubs. Put in proper references.
 	if ( defined( $commands[$$self]{ $name }->parameters ) )
@@ -945,7 +977,14 @@ sub AddCommands {
 	return 1;
 }
 
+sub YamlPrint {
+	my ($self, $ref ) = @_;
+	return Dump($ref);
+}
+
 1;
+
+=back
 
 =head1 AUTHOR
 

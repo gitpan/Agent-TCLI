@@ -1,6 +1,6 @@
 package Agent::TCLI::User;
 #
-# $Id: User.pm 166 2007-03-09 16:36:47Z hacker $
+# $Id: User.pm 50 2007-04-25 10:47:17Z hacker $
 #
 =head1 NAME
 
@@ -10,35 +10,37 @@ Net::CLI::User - A User class for Net::CLI.
 
 An object for storing Net::CLI user information.
 
-my $user = Net::CLI::User->new(
-	'id'		=> 'user@example.com',
-	'protocol'	=> 'jabber',
-	'auth'		=> 'read only',
-);
+	my $user = Net::CLI::User->new(
+		'id'		=> 'user@example.com',
+		'protocol'	=> 'jabber',
+		'auth'		=> 'read only',
+	);
 
-my $name = $user->get_name;
+	my $name = $user->get_name;
 
-print "My user is ".$name.". \n";
-print $name."'s domain is ".$user->get_domain.". \n";
+	print "My user is ".$name.". \n";
+	print $name."'s domain is ".$user->get_domain.". \n";
 
 
 =cut
 
-#use warnings;
-#use strict;
+use warnings;
+use strict;
 #use Carp;
 
 use Object::InsideOut qw(Agent::TCLI::Base);
 use Params::Validate qw(validate_with);
 
-our $VERSION = '0.'.sprintf "%04d", (qw($Id: User.pm 166 2007-03-09 16:36:47Z hacker $))[2];
+our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: User.pm 50 2007-04-25 10:47:17Z hacker $))[2];
 
 =head2 ATTRIBUTES
 
-The following attributes are accessible through standard get_ or set_
-methods unless otherwise noted
+The following attributes are accessible through standard accessor/mutator
+methods and may be set as a parameter to new unless otherwise noted.
 
-=head3 id
+=over
+
+=item id
 
 ID of user in a form acceptable to the protocol.
 XMPP/Jabber IDs MUST not include resource information.
@@ -46,7 +48,7 @@ XMPP/Jabber IDs MUST not include resource information.
 =cut
 my @id		:Field	:All('id');
 
-=head3 protocol
+=item protocol
 
 Protocol that user is allowed access on. Currently only xmpp and xmpp-groupchat
 are supported by Transport::XMPP. If the protocol is xmpp-groupchat, the
@@ -55,7 +57,7 @@ Transport will automatically join the conference room at start-up.
 =cut
 my @protocol	:Field	:All('protocol');
 
-=head3 auth
+=item auth
 
 Authorization level of user. MUST be one of these values:
   B<reader> has read access
@@ -72,7 +74,7 @@ being checked anywhere.
 =cut
 my @auth 	:Field	:All('auth');
 
-=head3 password
+=item password
 
 A password for the user.
 
@@ -87,6 +89,8 @@ my @password		:Field
 
 # Standard class utils are inherited
 
+=back
+
 =head2 METHODS
 
 =head2 new (lots of stuff)
@@ -95,13 +99,11 @@ Creates a new user object. All the above attributes may be specified. Currently
 all are optional, but it would be rather useless to have a user without an id or
 protocol and auth is strongly recommended.
 
-=head2 get_name()
+=over
+
+=item get_name()
 
 Retrieve the short name for the user. Currently anything in front of the '@'.
-
-=head3  Usage
-
-$user->get_name()
 
 =cut
 
@@ -114,13 +116,9 @@ sub get_name {
   return ($1);
 } # End get_name
 
-=head2 get_domain()
+=item get_domain()
 
 Retrieve the domain for the user. Currently whatever is after the '@'.
-
-=head3  Usage
-
-$user->get_domain()
 
 =cut
 
@@ -133,12 +131,10 @@ sub get_domain {
   return ($2);
 } # End get_domain
 
-=head2 not_authorized ( { parameters (see usage) } )
+=item not_authorized ( { parameters (see usage) } )
 
 Returns 0 if user is authorized, 'Not found' if user is not a match, and a message
 if a match, but the protocol and/or auth do not match.
-
-=head3 Description
 
 Checks id and optional parameters and returns false if matched. This method
 will automatically strip off Jabber resource before matching user. It is
@@ -152,12 +148,12 @@ that the value must be defined in the user in order to match.
 By returning false for authorization, one can check the reason why
 a true value was returned for unauthorized, or just ignore it.
 
-=head3 Usage
+Usage:
 
-not_authorized ( { id	   =>  value,   # user id. Will strip off resource
-				  protocol =>  qr(jabber),   # optional regex for protocol
-				  auth	   =>  qr(master|writer),   # option regex for auth
-				} );
+	not_authorized ( { id	   =>  value,        # user id. Will strip off resource
+					  protocol =>  qr(jabber),   # optional regex for protocol
+					  auth	   =>  qr(master|writer),   # option regex for auth
+					} );
 
 =cut
 
@@ -216,6 +212,7 @@ sub not_authorized {
 
 1;
 #__END__
+=back
 
 =head3 INHERITED METHODS
 
@@ -227,7 +224,7 @@ details.
 
 Eric Hacker	 E<lt>hacker at cpan.orgE<gt>
 
-=head2 BUGS
+=head1 BUGS
 
 SHOULDS and MUSTS are currently not always enforced.
 
@@ -238,3 +235,7 @@ Probably many others.
 =head1 LICENSE
 
 Copyright (c) 2007, Alcatel Lucent, All rights resevred.
+
+This package is free software; you may redistribute it
+and/or modify it under the same terms as Perl itself.
+

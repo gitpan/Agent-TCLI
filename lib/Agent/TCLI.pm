@@ -1,6 +1,6 @@
 package Agent::TCLI;
 #
-# $Id: TCLI.pm 42 2007-04-02 20:20:14Z hacker $
+# $Id: TCLI.pm 54 2007-04-26 21:37:55Z hacker $
 #
 =head1 NAME
 
@@ -19,11 +19,15 @@ The documentation still needs much more improvement.
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 
-This is a documentation and version only module.
+This is a documentation and version only module. A simple Agent script
+enabling the Tail command package is installed with this module.
+See L<tail_agent> or run:
+
+	tail_agent man
 
 =head1 DESCRIPTION
 
@@ -31,7 +35,7 @@ TCLI is an acronym for Transactional Contextual command Line
 Interface. Optionally it may stand for Tester's Command Line
 Interface.
 
-TCLI supports the writing of agents (bots) that interact with their
+TCLI supports the writing of agents (Agents) that interact with their
 host operating system or the network with a current focus on
 supporting functional testing.
 
@@ -44,7 +48,7 @@ supports a Jabber/XMPP Transport as a module that ships with the
 core. An HTTP transport is planned. Transports may support both a
 human interface (the CLI) and an RPC interface. The RPC interface
 supports the testing capability, but could also be used to interact
-in a client server like manner with a GUI or some other application.
+in a client server like manner with a GUI or other application.
 
 TLCI is designed to allow new commands to be added
 through additional modules in collections called packages.
@@ -52,9 +56,23 @@ TCLI attempts to make writing these
 modules easier by providing Base classes that offer much of the
 needed functionality to support the standardized, easy to learn human
 interface. The goal is to allow users to add new functionality without
-having then spend a lot of time learning the particular syntax.
+having then spend a lot of time learning the particular syntax of a
+new tool.
 
-=head1 INTERFACE
+=head1 GETTING STARTED
+
+The quickest way to start running an agent is to run the provided Tail Agent:
+
+	tail_agent user=<user> password=<example> domain=<example.com>
+
+One must fist have created a Jabber/XMPP account for the agent to log in to.
+One can then log in with a Jabber client using the same user ID and password
+and communicate with the Agent. The Agnet will be logged in using the
+resource 'tcli'. Jabber clients vary in how to start a chat with onself
+at a different resource, so please see your Jabber client documentation
+for details.
+
+=head1 COMPONENTS
 
 The following modules make up the core of the TCLI system.
 

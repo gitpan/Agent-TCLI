@@ -1,6 +1,6 @@
 package Agent::TCLI::Base;
 #
-# $Id: Base.pm 171 2007-03-23 22:52:02Z hacker $
+# $Id: Base.pm 57 2007-04-30 11:07:22Z hacker $
 #
 =head1 NAME
 
@@ -20,7 +20,7 @@ use warnings;
 use strict;
 use Carp;
 
-our $VERSION = '0.1.'.sprintf "%04d", (qw($Id: Base.pm 171 2007-03-23 22:52:02Z hacker $))[2];
+our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Base.pm 57 2007-04-30 11:07:22Z hacker $))[2];
 
 use Object::InsideOut;
 use Data::Dump qw(pp);
@@ -30,20 +30,22 @@ use Data::Dump qw(pp);
 The following attributes are accessible through standard accessor/mutator
 methods and may be set as a parameter to new unless otherwise noted.
 
+=over
+
 =cut
 
 # Standard class utils
 # I need to redo err handling as its not useful as is.
-=head3 err
+=item err
 
 Error message if something went wrong with a method call. Cannot be set or
-passed in with new. Not actually used, as error needs to be revisited.
+passed in with new. Not actually used, as erroring needs to be revisited.
 
 =cut
 my @err				:Field
 					:Get('err');
 
-=head3 verbose
+=item verbose
 
 Turns on/off internal state messages and warnings. Higher values produce more
 verbosity.
@@ -55,7 +57,7 @@ my @verbose			:Field
 					:Arg('Name' => 'verbose', 'Default' => 0 )
 					:Acc('verbose');
 
-=head3 do_verbose
+=item do_verbose
 
 A routine to output the results of a verbose call.
 This allows it to be changed within an object.
@@ -73,6 +75,25 @@ sub _set_err {
   $self->Verbose("Err called");
   return undef;
 }
+
+=back
+
+=head2 METHODS
+
+=over
+
+=item Verbose (<message>, [ <level>, <dump_var> ]  )
+
+This method is use to output all logging and debugging commands. It will use
+the sub in do_verbose to output the message if the level is less than or
+equal to the current value of $self->verbose. If level is not suppiled,
+it defaults to one.
+If a dump_var is included, its value will be output using the Data::Dump::pp
+function. This can pe useful for checking the inside of array, hashes
+and objects. If the object is an OIO object, use the objects own $obj->dump(1)
+method in the message.
+
+=cut
 
 sub Verbose {
 	my ($self, $message, $level, $var) = @_;
@@ -109,7 +130,7 @@ sub Verbose {
 	return ($txt);
 }
 
-=head3 _automethod
+=item _automethod
 
 Several TCLI classes take advantage of automethods to enable extending classes
 to store information. There are also Numeric, Array and Hash automethods
@@ -385,6 +406,8 @@ sub _automethod :Automethod {
 
 1; # Magic true value required at end of module
 #__END__
+
+=back
 
 =head3 INHERITED METHODS
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-# $Id: TCLI.Control.t 40 2007-04-01 01:56:43Z hacker $
+# $Id: TCLI.Control.t 49 2007-04-25 10:32:36Z hacker $
 
 use warnings;
 use strict;
@@ -36,7 +36,7 @@ sub POE::Kernel::TRACE_DEFAULT  () { $poe_td }
 sub POE::Kernel::TRACE_EVENTS  () { $poe_te }
 
 use Agent::TCLI::Transport::Test;
-use Agent::TCLI::Transport::Test::Testee;
+use Agent::TCLI::Testee;
 use POE;
 
 BEGIN {
@@ -50,7 +50,7 @@ sub Init {
 my @obj_cmds = (
 		Agent::TCLI::Command->new(
 	        'name'		=> 'meganat',
-	        'contexts'	=> {'/' => 'meganat'},
+	        'contexts'	=> {'ROOT' => 'meganat'},
     	    'help' 		=> 'sets up outbound NAT table from a predefined address block',
         	'usage'		=> 'meganat add target=target.example.com',
         	'topic'		=> 'attack prep',
@@ -60,7 +60,7 @@ my @obj_cmds = (
 		),
 		Agent::TCLI::Command->new(
 	        'name'		=> 'noreset',
-	        'contexts'	=> {'/' => 'noreset'},
+	        'contexts'	=> {'ROOT' => 'noreset'},
     	    'help' 		=> 'sets up outbound filters to block TCP RESETS to target',
         	'usage'		=> 'noreset add target=target.example.com',
         	'topic'		=> 'attack prep',
@@ -96,7 +96,7 @@ my @obj_cmds = (
 		),
 		Agent::TCLI::Command->new(
 	        'name'		=> 'test_all',
-	        'contexts'	=> {'/' => 'test_all'},
+	        'contexts'	=> {'ROOT' => 'test_all'},
     	    'help' 		=> 'under test_all is one handler for everything',
         	'usage'		=> 'test_all anything',
         	'topic'		=> 'all',
@@ -106,7 +106,7 @@ my @obj_cmds = (
 		),
 		Agent::TCLI::Command->new(
 	        'name'		=> 'all',
-	        'contexts'	=> {'test_all' => 'A*'},
+	        'contexts'	=> {'test_all' => 'ALL'},
     	    'help' 		=> 'anything in context test_all',
         	'usage'		=> 'anything',
         	'topic'		=> 'all',
@@ -120,17 +120,17 @@ my @obj_cmds = (
 				'meganat' 	=> 'show',
 				'noresets'	=> 'show',
 				'test1'		=> {
-					'*U'				=> 'show',
+					'GROUP'				=> 'show',
 					'test1.1'		=> {
 						'test1.1.1'		=> 'show',
 						'test1.1.2'		=> 'show',
 						'test1.1.3'		=> 'show',
 						},
 					'test1.2'		=> {
-						'*U'		=> 'show',
+						'GROUP'		=> 'show',
 						},
 					'test1.3'		=> {
-						'*U'		=> 'show',
+						'GROUP'		=> 'show',
 						},
 					},
 				},
@@ -143,7 +143,7 @@ my @obj_cmds = (
 		),
 		Agent::TCLI::Command->new(
 	        'name'		=> 'test1',
-	        'contexts'	=> {'/' => 'test1'},
+	        'contexts'	=> {'ROOT' => 'test1'},
     	    'help' 		=> 'test1 help',
         	'usage'		=> 'test1 test1.1 test 1.1.1',
         	'topic'		=> 'testing',
@@ -188,7 +188,7 @@ my @dc = (
         usage 		=> 'echo <something> or /echo ...',
         topic 		=> 'general',
         command 	=> 'pre-loaded',
-        contexts   	=> ['*'],
+        contexts   	=> ['UNIVERSAL'],
         call_style     	=> 'state',
         handler		=> 'general'
     },
@@ -198,7 +198,7 @@ my @dc = (
         usage     	=> 'Hi',
         topic     	=> 'Greetings',
         command 	=> 'pre-loaded',
-        contexts   	=> ['/'],
+        contexts   	=> ['ROOT'],
         call_style     	=> 'state',
         handler		=> 'general'
     },
@@ -208,7 +208,7 @@ my @dc = (
         usage     	=> 'Hello',
         topic     	=> 'Greetings',
         command 	=> 'pre-loaded',
-        contexts   	=> ['/'],
+        contexts   	=> ['ROOT'],
         call_style     	=> 'state',
         handler		=> 'general'
     },
@@ -218,7 +218,7 @@ my @dc = (
         usage     	=> 'hello',
         topic     	=> 'Greetings',
         command 	=> 'pre-loaded',
-        contexts   	=> ['/'],
+        contexts   	=> ['ROOT'],
         call_style     	=> 'state',
         handler		=> 'general'
     },
@@ -228,7 +228,7 @@ my @dc = (
         usage     	=> 'hi',
         topic     	=> 'Greetings',
         command 	=> 'pre-loaded',
-        contexts   	=> ['/'],
+        contexts   	=> ['ROOT'],
         call_style     	=> 'state',
         handler		=> 'general'
     },
@@ -238,7 +238,7 @@ my @dc = (
         usage     	=> 'context or /context',
         topic     	=> 'general',
         command 	=> 'pre-loaded',
-        contexts   	=> ['/'],
+        contexts   	=> ['ROOT'],
         call_style     	=> 'state',
         handler		=> 'general'
     },
@@ -248,7 +248,7 @@ my @dc = (
         'usage'		=> 'help [ command ] or /help',
         'topic'		=> 'general',
         'command' 	=> 'pre-loaded',
-        'contexts'	=> ['*'],
+        'contexts'	=> ['UNIVERSAL'],
         'call_style'     => 'state',
         'handler'	=> 'help'
     },
@@ -258,17 +258,17 @@ my @dc = (
         'topic' 	=> 'general',
         'name' 		=> 'status',
         'command' 	=> 'pre-loaded',
-        'contexts'	=> ['*'],
+        'contexts'	=> ['UNIVERSAL'],
         'call_style'     => 'state',
         'handler'	=> 'general'
     },
     {
-        'name'      => '/',
+        'name'      => 'ROOT',
         'help' => "restore root context, use '/command' for a one time switch",
         'usage'     => '/   ',
         'topic'     => 'general',
         'command'   => 'pre-loaded',
-        'contexts'   => ['*'],
+        'contexts'   => ['UNIVERSAL'],
         'call_style'     => 'state',
         'handler'	=> 'exit',
     },
@@ -286,7 +286,7 @@ my @dc = (
         'usage'     => 'listcmd (<context>)',
         'topic'     => 'admin',
         'command'   => 'pre-loaded',
-        'contexts'   => ['*'],
+        'contexts'   => ['UNIVERSAL'],
         'call_style'     => 'state',
         'handler'	=> 'listcmd',
     },
@@ -296,7 +296,7 @@ my @dc = (
         'usage'     => 'dumpcmd <cmd>',
         'topic'     => 'admin',
         'command'   => 'pre-loaded',
-        'contexts'   => ['*'],
+        'contexts'   => ['UNIVERSAL'],
         'call_style'     => 'state',
         'handler'	=> 'dumpcmd',
     },
@@ -314,7 +314,7 @@ my @dc = (
         'usage'     => 'exit or /exit',
         'topic'     => 'general',
         'command'   => 'pre-loaded',
-        'contexts'   => ['*'],
+        'contexts'   => ['UNIVERSAL'],
         'call_style'     => 'state',
         'handler'	=> 'exit',
     },
@@ -329,7 +329,7 @@ my (@obj_cmds) = Init();
 use Agent::TCLI::Package::Base;
 
 my $test1 = Agent::TCLI::Control->new(
-	'context'	=> '/',
+	'context'	=> 'ROOT',
 	'id'		=> 'test_control_1',
 
 	'verbose'		=> \$verbose,
@@ -346,15 +346,15 @@ my $test2 = Agent::TCLI::Control->new(
 
 
 # Test context methods
-is($test1->print_context,'/', '$test1->print_context  from init args');
+is($test1->print_context,'ROOT', '$test1->print_context  from init args');
 $test1->pop_context();
-is($test1->print_context,'/', '$test1->print_context  after Popping /');
+is($test1->print_context,'ROOT', '$test1->print_context  after Popping /');
 is($test1->depth_context,0, '$test1->depth_context for /');
 ok($test1->push_context('test'),'$test1 push context onto / ');
 is($test1->depth_context,1, '$test1->depth_context for test ');
 is($test1->print_context,'test', '$test1->print_context  test');
 $test1->pop_context();
-is($test1->print_context,'/', '$test1->print_context after Popping test');
+is($test1->print_context,'ROOT', '$test1->print_context after Popping test');
 is($test1->depth_context,0, '$test1->depth_context for /');
 
 
@@ -397,7 +397,7 @@ foreach my $test ( @cmds )
 				{
 					foreach my $t3context ( keys %{ $test->[1]{$tcontext}{$t2context} } )
 					{
-						if ($t3context ne '*')
+						if ($t3context ne 'UNIVERSAL')
 						{
 							$test1->context( $tcontext, $t2context, $t3context );
 							($tcmd,$preargs,$ttxt) = $test1->FindCommand([ $test->[0] ]);
@@ -421,7 +421,7 @@ foreach my $test ( @cmds )
 							is($ttxt,'', 'Found cmd '.$t2context.' '.$t3context.' '.$test->[0] );
 							is($tcmd->name,$test->[0], 'Name '.$test->[0]." matches" );
 
-							$test1->context( '/' );
+							$test1->context( 'ROOT' );
 							($tcmd,$preargs,$ttxt) = $test1->FindCommand([ $tcontext, $t2context, $t3context, $test->[0] ]);
 							$test1->Verbose( "# 3 tcmd(".$tcmd->name.") preagrs($preargs) ttxt($ttxt) test(".$test->[0].") context(".$test1->print_context.") \n");
 							is($ttxt,'', 'Found cmd '.$tcontext.' '.$t2context.' '.$t3context.' '.$test->[0] );
@@ -431,7 +431,7 @@ foreach my $test ( @cmds )
 				}
 				else
 				{
-					if ($t2context ne '*')
+					if ($t2context ne 'UNIVERSAL')
 					{
 						$test1->context( $tcontext, $t2context );
 						($tcmd,$preargs,$ttxt) = $test1->FindCommand([ $test->[0] ]);
@@ -457,7 +457,7 @@ foreach my $test ( @cmds )
 						is($ttxt,'', 'Found cmd '.$t2context.' '.$test->[0].' arg1 ' );
 						is($tcmd->name,$test->[0], 'Name '.$test->[0]." matches" );
 
-						$test1->context( '/' );
+						$test1->context( 'ROOT' );
 						($tcmd,$preargs,$ttxt) = $test1->FindCommand([ $tcontext, $t2context, $test->[0] ]);
 						$test1->Verbose( "# 2/ tcmd(".$tcmd->name.") preagrs($preargs) ttxt($ttxt) test(".$test->[0].") context(".$test1->print_context.") \n");
 						is($ttxt,'', 'Found cmd '.$tcontext.' '.$t2context.' '.$test->[0] );
@@ -494,9 +494,9 @@ foreach my $test ( @cmds )
 			is($ttxt,'', 'Found cmd '.$test->[0].' arg1 exit' );
 			is($tcmd->name,$test->[0], 'Name '.$test->[0]." matches" );
 
-			if ( $tcontext ne '/' )
+			if ( $tcontext ne 'ROOT' )
 			{
-				$test1->context( '/' );
+				$test1->context( 'ROOT' );
 				($tcmd,$preargs,$ttxt) = $test1->FindCommand([ $tcontext, $test->[0] ]);
 				$test1->Verbose( "# 1/ tcmd(".$tcmd->name.") preagrs($preargs) ttxt($ttxt) test(".$test->[0].") context(".$test1->print_context.") \n");
 				is($ttxt,'', 'Found cmd '.$tcontext.' '.$test->[0] );
@@ -533,7 +533,7 @@ my @input = (
 [qw( test1 test1.2 test1.1.2 show ) ],
 [qw( test1 test1.2 test1.1.3 show ) ],
 );
-$test1->context( '/' );
+$test1->context( 'ROOT' );
 foreach my $args ( @input )
 {
 	my @targs = @{$args};
@@ -551,7 +551,7 @@ foreach my $args ( @input )
 [qw( test1 test1.3 exit ) ],
 [qw( test1 test1.1 test1.1.1 exit ) ],
 );
-$test1->context( '/' );
+$test1->context( 'ROOT' );
 #$test1->verbose(3);
 foreach my $args ( @input )
 {
@@ -572,7 +572,7 @@ foreach my $args ( @input )
 [qw( test_all one two three) ],
 [qw( test_all three two one) ],
 );
-$test1->context( '/' );
+$test1->context( 'ROOT' );
 #$test1->verbose(3);
 foreach my $args ( @input )
 {

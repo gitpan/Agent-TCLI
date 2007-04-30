@@ -1,6 +1,6 @@
 package Agent::TCLI::Package::XMPP;
 #
-# $Id: XMPP.pm 42 2007-04-02 20:20:14Z hacker $
+# $Id: XMPP.pm 57 2007-04-30 11:07:22Z hacker $
 #
 =pod
 
@@ -8,18 +8,33 @@ package Agent::TCLI::Package::XMPP;
 
 Agent::TCLI::Package::XMPP - A package of commands to access the XMPP transport
 
-=head1 VERSION
-
-This document describes Agent::TCLI::Package::XMPP version 0.0.1
-
 =head1 SYNOPSIS
+
+	# Within a TCLI Agent script
+
+	use Agent::TCLI::Transport::XMPP;
+	use Agent::TCLI::Package::XMPP;
+
+	my @packages = (
+		Agent::TCLI::Package::XMPP->new(),
+	);
+
+	Agent::TCLI::Transport::XMPP->new(
+	    'control_options'	=> {
+		    'packages' 		=> \@packages,
+	     },
+	);
 
 
 =head1 DESCRIPTION
 
-=head1 INTERFACE
+This package provides commands for the control of the XMPP Transport from
+within a TLCI Agent. One would typically want to have this command package
+loaded when using the XMPP Transport, but it is not required.
 
-These are all required interfaces for commands. Others may be added ac necessary.
+This is still poorly documented. I apologize for the inconvenience.
+
+=head1 INTERFACE
 
 =cut
 
@@ -34,7 +49,7 @@ use Getopt::Lucid qw(:all);
 
 use Object::InsideOut qw(Agent::TCLI::Package::Base);
 
-our $VERSION = '0.0.'.sprintf "%04d", (qw($Id: XMPP.pm 42 2007-04-02 20:20:14Z hacker $))[2];
+our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: XMPP.pm 57 2007-04-30 11:07:22Z hacker $))[2];
 
 =head2 ATTRIBUTES
 
@@ -51,16 +66,12 @@ someone trying to enhance the functionality of this Package module.
 Most of these methods are for internal use within the TCLI system and may
 be of interest only to developers trying to enhance TCLI.
 
-=head2 new ( hash of attributes )
+=over
+
+=item new ( hash of attributes )
 
 Usually the only attributes that are useful on creation are the
 verbose and do_verbose attrbiutes that are inherited from Agent::TCLI::Base.
-
-=cut
-
-=head3 _preinit
-
-This private Object::InsideOut (OIO) method is used for object initialization.
 
 =cut
 
@@ -89,12 +100,6 @@ sub _preinit :Preinit {
   	$args->{'opt_args'} = [qw( group_mode group_prefix verbose )];
 
 }
-
-=head3 _init
-
-This private OIO method is used for object initialization.
-
-=cut
 
 sub _init :Init {
 	my $self = shift;
@@ -210,7 +215,7 @@ Agent::TCLI::Command:
   call_style: session
   command: tcli_xmpp
   contexts:
-    '/':
+    ROOT:
       - jabber
       - xmpp
   handler: establish_context
@@ -349,7 +354,7 @@ Agent::TCLI::Command:
 
 }
 
-=head3 peer
+=item peer
 
 This POE event handler executes the peer commands.
 
@@ -372,7 +377,7 @@ sub peer {
 	# break down args
 	return unless ( $param = $cmd->Validate($kernel, $request, $self) );
 
-	$self->Verbose("change: param dump",4,$param);
+	$self->Verbose("peer: param dump",4,$param);
 
 	my $user = Agent::TCLI::User->new($param
 	);
@@ -393,9 +398,9 @@ sub peer {
 	return ($self->name.":peer")
 }
 
-=head3 settings
+=item change
 
-This POE event handler executes the  commands.
+This POE event handler executes the change command.
 
 =cut
 
@@ -414,46 +419,9 @@ sub change {
 	$kernel->post('transport_xmpp' => 'Set' =>
 			$param => $request );
 
-#	# break down args
-#	eval { $opt = Getopt::Lucid->getopt( [
-#		Param("group_mode"),
-#		Param("group_prefix"),
-#		Param("verbose"),
-#	], $request->args )};
-#
-#	if( $@ )
-#	{
-#		$self->Verbose('set: getopt lucid got ('.$@.') ');
-#		$request->Respond($kernel,  "Invalid Args: $@ !", 400);
-#		return;
-#	}
-#
-#   	# Validate args
-#   	# Need to evolve this into being more automated code but not sure how yet.
-#	$txt .= $self->NotPosInt($opt->get_verbose, "verbose", );
-#	$txt .= $self->NotScalar($opt->get_group_mode, "group_mode", );
-#	$txt .= $self->NotScalar($opt->get_group_prefix, "group_prefix", );
-
-
-#	if( $txt )
-#	{
-#		$self->Verbose('set: paramter validation failed txt('.$txt.') ');
-#		$request->Respond($kernel, "Invalid Args: ".$txt, 400);
-#		return;
-#	}
-#	else
-#	{
-#		foreach my $attr ( @{$self->opt_args} )
-#		{
-#			my $get_attr = 'get_'.$attr;
-#			if ($opt->$get_attr)
-#			{
-#			}
-#		}
-#	}
 }
 
-=head3 show
+=item show
 
 This POE event handler executes the show commands.
 
@@ -505,7 +473,7 @@ sub show {
 	$request->Respond($kernel, $txt);
 }
 
-=head3 shutdown
+=item shutdown
 
 This POE event handler executes the shutdown command.
 
@@ -521,12 +489,14 @@ sub shutdown {
 	$kernel->post('transport_xmpp' => '_shutdown');
 }
 
-=head3 start
+=item start
 
 This POE event handler executes the start command. It is not exactly clear
 when this would be useful currently, but we have a shutdown command and
 balance must be maintained. Hopefully other transports will be available
 in the future and this command might be more useful.
+
+=back
 
 =cut
 
@@ -544,7 +514,7 @@ sub start {
 1;
 #__END__
 
-=head1 INHERITED METHODS
+=head3 INHERITED METHODS
 
 This module is an Object::InsideOut object that inherits from Agent::TCLI::Package::Base. It
 inherits methods from both. Please refer to their documentation for more

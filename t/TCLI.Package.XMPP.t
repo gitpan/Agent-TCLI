@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-# $Id: TCLI.Package.XMPP.t 40 2007-04-01 01:56:43Z hacker $
+# $Id: TCLI.Package.XMPP.t 49 2007-04-25 10:32:36Z hacker $
 
 use Test::More tests => 32;
 use lib 'blib/lib';
@@ -38,7 +38,7 @@ sub POE::Kernel::TRACE_DEFAULT  () { $poe_td }
 sub POE::Kernel::TRACE_EVENTS  () { $poe_te }
 
 use Agent::TCLI::Transport::Test;
-use Agent::TCLI::Transport::Test::Testee;
+use Agent::TCLI::Testee;
 use Agent::TCLI::Transport::XMPP;
 use Agent::TCLI::User;
 use POE;
@@ -110,7 +110,7 @@ my $test_master = Agent::TCLI::Transport::Test->new({
 
 });
 
-my $t = Agent::TCLI::Transport::Test::Testee->new(
+my $t = Agent::TCLI::Testee->new(
 	'test_master'	=> $test_master,
 	'addressee'		=> 'self',
 );

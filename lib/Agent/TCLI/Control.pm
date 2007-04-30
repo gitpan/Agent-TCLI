@@ -1,5 +1,5 @@
 package Agent::TCLI::Control;
-# $Id: Control.pm 168 2007-03-16 18:10:18Z hacker $
+# $Id: Control.pm 57 2007-04-30 11:07:22Z hacker $
 
 =pod
 
@@ -9,7 +9,10 @@ Agent::TCLI::Control - Manage TCLI commands
 
 =head1 SYNOPSIS
 
-Controls are spawned from within Transports.
+Controls are spawned from within Transports. One does not need to
+manipulate to create typical Agents.
+Control is very poorly documented at this point.
+I apologize for the inconvenience.
 
 =head1 DESCRIPTION
 
@@ -53,11 +56,20 @@ use Params::Validate;
 #use Data::Dump qw(pp);
 use Text::ParseWords;
 
-sub VERBOSE () { 0 }
+#sub VERBOSE () { 0 }
 
-our $VERSION = '0.0.'.sprintf "%04d", (qw($Id: Control.pm 168 2007-03-16 18:10:18Z hacker $))[2];
+our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Control.pm 57 2007-04-30 11:07:22Z hacker $))[2];
 
-=head3 id
+=head1 INTERFACE
+
+=head2 ATTRIBUTES
+
+The following attributes are accessible through standard accessor/mutator
+methods and may be set as a parameter to new unless otherwise noted.
+
+=over
+
+=item id
 
 ID of control. MUST be unique to all other controls and is the POE kernel alias.
 
@@ -65,7 +77,7 @@ ID of control. MUST be unique to all other controls and is the POE kernel alias.
 my @id 			:Field
 				:All('id');
 
-=head3 commands
+=item commands
 
 The collection of registered commands in the control library. Commands may
 not be set, but must added with the register method.
@@ -89,7 +101,7 @@ my @packages	:Field	:All('packages');
 
 #my @alias		:Field	:All('alias');
 
-=head3 auth
+=item auth
 
 Authorization for the user for this control. Must be separate from the
 auth in the user object since that might not be the only factor at all times.
@@ -98,7 +110,7 @@ auth in the user object since that might not be the only factor at all times.
 my @auth 		:Field
 				:All('auth');
 
-=head3 type
+=item type
 
 Type of conversation. MUST be one of these values:
   B<instant> =>  one time (or not specified)
@@ -108,49 +120,41 @@ Type of conversation. MUST be one of these values:
 =cut
 my @type 	:Field( 'All' => 'type' );
 
-=head3 context
+=item context
 
 Contains the context of the current Command application for the control.
 
 =cut
 my @context 	:Field
 				:Type('Array')
-				:Arg('Name' => 'context', 'Default' => ['/'] )
+				:Arg('Name' => 'context', 'Default' => ['ROOT'] )
 				:Acc('context');
 
-=head3 owner
+=item owner
 
 Contains the owning session of the control. This allows the control to be
 passed around between sessions and whatever session that has it can
 send back to the top level originating session.
 
 =cut
-my @owner 	:Field( 'All' => 'owner' );
+my @owner 		:Field( 'All' => 'owner' );
 
-=head3 prompt
+=item prompt
 
 The promt that the control is displaying, when appropriate.
 
 =cut
-my @prompt			:Field  :All('prompt');
+my @prompt		:Field  :All('prompt');
 
-#=head3 local_address
-#
-#The local IP address of the system
-#
-#=cut
-#my @local_address 	   :Field 	:All('local_address');
-#
-#=head3 local_port
-#
-#The local port one is listening on
-#B<local_port> will only accept numeric type values.
-#
-#=cut
-#my @local_port		:Field  :All('local_port')
-#					:Type('Numeric' );
+=item local_address
 
-=head3 hostname
+The local IP address of the system
+
+=cut
+my @local_address	:Field
+					:All('local_address');
+
+=item hostname
 
 The hostname being used by the control.
 
@@ -158,7 +162,7 @@ The hostname being used by the control.
 my @hostname		:Field
 					:All('hostname');
 
-=head3 poe_debug
+=item poe_debug
 
 A flag to set whether to enable poe debugging if installed
 
@@ -174,16 +178,19 @@ my @session			:Field
 					:Weak;
 
 # Standard class utils are inherited
+=back
 
-=head1 METHODS
+=head2 METHODS
 
-=head2 spawn
+=over
+
+=item _init
 
 Private. Used by OIO to initialize the Control object.
 
 =cut
 
-sub spawn :Init {
+sub _init :Init {
   my $self = shift;
 
   # Validate arguments
@@ -199,7 +206,7 @@ sub spawn :Init {
 #  );
 
   # Register default commands
-  $self->Verbose( "spawn: Registering default commands \n" );
+  $self->Verbose( "init: Registering default commands \n" );
 
   foreach my $cmd ( values %{ $self->_default_commands } )
   {
@@ -207,7 +214,7 @@ sub spawn :Init {
   }
 
   # if available, register requested command packages
-  $self->Verbose( "spawn: Registering user packages \n" );
+  $self->Verbose( "init: Registering user packages \n" );
 
   if ( defined($packages[$$self] ) ) {
 	my $txt;
@@ -218,7 +225,7 @@ sub spawn :Init {
   } # end if packages
 
   # Register user commands, if requested #{{{
-#  $self->Verbose( "spawn: Registering user commands \n" );
+#  $self->Verbose( "init: Registering user commands \n" );
 #
 #  if( ref( $commands[$$self] ) =~ /ARRAY/i ) {
 #
@@ -228,15 +235,15 @@ sub spawn :Init {
 #    	} elsif ( ref($cmd) =~ /Agent::TCLI::Command/ ) {
 #			$self->register_command($cmd);
 #    	} else {
-#			$self->Verbose("spawn: Parameter 'commands' contains bad element");
-#			$self->Verbose("spawn: Dump of commands ", 4, $commands[$$self]);
+#			$self->Verbose("init: Parameter 'commands' contains bad element");
+#			$self->Verbose("init: Dump of commands ", 4, $commands[$$self]);
 #  		}
 #	} #end foreach
 #
 #  } else {
 #
-#	$self->Verbose("spawn: User commands not an array ref, not loaded");
-#	$self->Verbose("spawn: Dump of commands ", 4, $commands[$$self]);
+#	$self->Verbose("init: User commands not an array ref, not loaded");
+#	$self->Verbose("init: Dump of commands ", 4, $commands[$$self]);
 #
 #  } #end if commands
 
@@ -244,7 +251,7 @@ sub spawn :Init {
   	$self->set(\@prompt, $id[$$self]." [".$hostname[$$self]."]: ");
   }
 
-  $self->Verbose( "spawn: Creating session \n" );
+  $self->Verbose( "init: Creating session \n" );
   $self->set(\@session, POE::Session->create(
       object_states => [
           $self => [qw(
@@ -253,7 +260,6 @@ sub spawn :Init {
           	_shutdown
           	_default
           	ControlAddState
-          	control_err
           	control_presence
 
          	AsYouWished
@@ -265,21 +271,23 @@ sub spawn :Init {
           	general
           	help
           	manual
+          	net
 			)],
       ],
+      'heap' => $self,
   ));
 
   if( $session[$$self] ) {
   	$self->set(\@start_time, time() );
-	$self->Verbose( "spawn: SPAWNED at ".$start_time[$$self].
-		" spawn completed. \n\n");
+	$self->Verbose( "init: SPAWNED at ".$start_time[$$self].
+		" init completed. \n\n");
 	return $self;
   } else {
 	return undef;
   }
 }
 
-=head2 Register
+=item Register
 
 Register is an internal object method used to register commands with the Control.
 
@@ -302,7 +310,7 @@ sub Register {
     } );
 
 	# Set up a default contexts if one not provided.
-    $cmd{'contexts'} = { '/' => $cmd{'name'} } unless (defined ( $cmd{'contexts'}) );
+    $cmd{'contexts'} = { 'ROOT' => $cmd{'name'} } unless (defined ( $cmd{'contexts'}) );
 
 	$self->Verbose("Register: name ".$cmd{'name'} );
 
@@ -318,7 +326,7 @@ sub Register {
     return 1;
 }
 
-=head2 RegisterContexts
+=item RegisterContexts
 
 RegisterCotexts is an internal object method used to register contexts for
 commands with the Control.
@@ -334,8 +342,8 @@ sub RegisterContexts {
    	foreach my $c1 ( keys %{ $cmd->contexts } )
    	{
    		my $v1 = $cmd->contexts->{$c1};
-  		# Not catching if '/' and hash
-   		if ( ( $c1 ne '/' ) && ( ref( $v1 ) =~ /HASH/ ) )
+  		# Not warning on error if 'ROOT' and hash
+   		if ( ( $c1 ne 'ROOT' ) && ( ref( $v1 ) =~ /HASH/ ) )
    		{
    			foreach my $c2 ( keys %{ $v1 } )
    			{
@@ -403,7 +411,7 @@ sub RegisterContexts {
 	return 1;
 }
 
-=head2 FindCommand
+=item FindCommand
 
 FindCommand is an internal object method used to parse the command line
 arguments and determine the appropriate command handler.
@@ -413,7 +421,7 @@ arguments and determine the appropriate command handler.
 sub FindCommand {
 	my ($self, $args ) = @_;
 	$self->Verbose("FindCommand: Got args for ".$id[$$self]." in context ".
-		$self->print_context." \n",1,$args);
+		$self->print_context." \n",2,$args);
 
 	my (@c, $cmd, $txt, $code, $thisdepth);
 
@@ -478,30 +486,30 @@ sub FindCommand {
 		}
 		# All handler
 		elsif ( defined($c[3]) &&
-			defined($commands[$$self]{$c[0]}{$c[1]}{$c[2]}{'A*'} )
+			defined($commands[$$self]{$c[0]}{$c[1]}{$c[2]}{'ALL'} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{$c[0]}{$c[1]}{$c[2]}{'A*'}{'.'};
+			$commands[$$self]{$c[0]}{$c[1]}{$c[2]}{'ALL'}{'.'};
 			$thisdepth = 3;
 		}
 		# Universal in this context
 		elsif ( defined($c[3]) &&
-			defined($commands[$$self]{$c[0]}{$c[1]}{'*U'}) &&
-			defined($commands[$$self]{$c[0]}{$c[1]}{'*U'}{$c[3]})
+			defined($commands[$$self]{$c[0]}{$c[1]}{'GROUP'}) &&
+			defined($commands[$$self]{$c[0]}{$c[1]}{'GROUP'}{$c[3]})
 			)
 		{
 			$cmd =
-			$commands[$$self]{$c[0]}{$c[1]}{'*U'}{$c[3]}{'.'};
+			$commands[$$self]{$c[0]}{$c[1]}{'GROUP'}{$c[3]}{'.'};
 			$thisdepth = 3;
 		}
 		# $c[3] globally Universal
 		elsif ( defined($c[3]) &&
-			defined($commands[$$self]{'*'}{$c[3]} )
+			defined($commands[$$self]{'UNIVERSAL'}{$c[3]} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{'*'}{$c[3]}{'.'};
+			$commands[$$self]{'UNIVERSAL'}{$c[3]}{'.'};
 			$thisdepth = 3;
 		}
 		elsif (
@@ -525,30 +533,30 @@ sub FindCommand {
 	{
 		# All handler
 		if ( defined($c[2]) &&
-			defined($commands[$$self]{$c[0]}{$c[1]}{'A*'})
+			defined($commands[$$self]{$c[0]}{$c[1]}{'ALL'})
 			)
 		{
 			$cmd =
-			$commands[$$self]{$c[0]}{$c[1]}{'A*'}{'.'};
+			$commands[$$self]{$c[0]}{$c[1]}{'ALL'}{'.'};
 			$thisdepth = 2;
 		}
 		 # Universal in this context
 		elsif ( defined($c[2]) &&
-			defined($commands[$$self]{$c[0]}{'*U'} ) &&
-			defined($commands[$$self]{$c[0]}{'*U'}{$c[2]} )
+			defined($commands[$$self]{$c[0]}{'GROUP'} ) &&
+			defined($commands[$$self]{$c[0]}{'GROUP'}{$c[2]} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{$c[0]}{'*U'}{$c[2]}{'.'};
+			$commands[$$self]{$c[0]}{'GROUP'}{$c[2]}{'.'};
 			$thisdepth = 2;
 		}
 		# $c[2] globally Universal
 		elsif ( defined($c[2]) &&
-			defined($commands[$$self]{'*'}{$c[2]} )
+			defined($commands[$$self]{'UNIVERSAL'}{$c[2]} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{'*'}{$c[2]}{'.'};
+			$commands[$$self]{'UNIVERSAL'}{$c[2]}{'.'};
 			$thisdepth = 2;
 		}
 		elsif ( defined($commands[$$self]{$c[0]}{$c[1]}{'.'} )
@@ -570,29 +578,29 @@ sub FindCommand {
 	{
 		 # All handler
 		if (
-			defined( $commands[$$self]{$c[0]}{'A*'} )
+			defined( $commands[$$self]{$c[0]}{'ALL'} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{$c[0]}{'A*'}{'.'};
+			$commands[$$self]{$c[0]}{'ALL'}{'.'};
 			$thisdepth = 1;
 		}
 		# Universal context
 		elsif (
-			defined( $commands[$$self]{'*U'}{$c[1]}
+			defined( $commands[$$self]{'GROUP'}{$c[1]}
 			) )
 		{
 			$cmd =
-			$commands[$$self]{'*U'}{$c[1]}{'.'};
+			$commands[$$self]{'GROUP'}{$c[1]}{'.'};
 			$thisdepth = 1;
 		}
 		# $c[1] Globally Universal
 		elsif (
-			defined($commands[$$self]{'*'}{$c[1]} )
+			defined($commands[$$self]{'UNIVERSAL'}{$c[1]} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{'*'}{$c[1]}{'.'};
+			$commands[$$self]{'UNIVERSAL'}{$c[1]}{'.'};
 			$thisdepth = 1;
 		}
 		else
@@ -604,11 +612,11 @@ sub FindCommand {
 	if ( $thisdepth < 0 && defined($c[0]) && $depth == 0 )
 	{
 		# Root context
-		if ( defined($commands[$$self]{'/'}{$c[0]} )
+		if ( defined($commands[$$self]{'ROOT'}{$c[0]} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{'/'}{$c[0]}{'.'};
+			$commands[$$self]{'ROOT'}{$c[0]}{'.'};
 			$thisdepth = 0;
 		}
 		# There is no 'ALL' handling at the root context. Make a case and I'll consider it.
@@ -616,11 +624,11 @@ sub FindCommand {
 
 		# Globally Universal
 		elsif ( defined(
-			$commands[$$self]{'*'}{$c[0]}
+			$commands[$$self]{'UNIVERSAL'}{$c[0]}
 			) )
 		{
 			$cmd =
-			$commands[$$self]{'*'}{$c[0]}{'.'};
+			$commands[$$self]{'UNIVERSAL'}{$c[0]}{'.'};
 			$thisdepth = 0;
 		}
 		else
@@ -649,7 +657,7 @@ sub FindCommand {
 		@{$args} = splice(@c,$thisdepth+1);
 
 		$self->Verbose("FindCommand: Found(".$cmd->name.
-			") for ".$id[$$self]." with thisdepth($thisdepth) args\n",1,$args);
+			") for ".$id[$$self]." with thisdepth($thisdepth) args\n",2,$args);
 		# always return something defined.
 		$txt = '';
 		$code = 200;
@@ -659,7 +667,7 @@ sub FindCommand {
 	return($cmd, \@c, $txt, $code);
 }
 
-=head2 SortCommands
+=item SortCommands
 
 SortCommands is an internal object method used to sort the commands available
 in a context. It returns an array of arrays of alias => cmd object.
@@ -679,13 +687,13 @@ sub SortCommands {
 	foreach my $command ( sort keys %{$hash} )
 	{
 		push (@cmds, [ $command => $hash->{$command}{'.'}  ] )
-			if ( $command !~ qr(^\*U|^\.) ); # Ignore .objects and *Universals
+			if ( $command !~ qr(^GROUP|^\.) ); # Ignore .objects and GROUP
 	}
 
 	return (\@cmds);
 }
 
-=head2 ListCommands
+=item ListCommands
 
 ListCommands is an internal object method used to list the commands available
 in a context. It calls SortCommands once it has found the right context.
@@ -722,16 +730,16 @@ sub ListCommands {
 	# issues here probably need to be addressed there as well.
 
 	# Root context
-	if ( $c->[0] eq '/' && defined( $commands[$$self]{'/'} ) )
+	if ( $c->[0] eq '/' && defined( $commands[$$self]{'ROOT'} ) )
 	{
 		# This would allow hashes under / which is not supported by Control.pm
-		push( @aliases , @{ $self->SortCommands( $commands[$$self]{'/'} ) } );
+		push( @aliases , @{ $self->SortCommands( $commands[$$self]{'ROOT'} ) } );
 	}
 	# Global context. Only return if asked for.
-	elsif ( $c->[0] eq '*' && defined( $commands[$$self]{'*'} ) )
+	elsif ( $c->[0] eq '*' && defined( $commands[$$self]{'UNIVERSAL'} ) )
 	{
 		# This would allow hashes under * which is not supported by Control.pm
-		push( @aliases , @{ $self->SortCommands( $commands[$$self]{'*'} )  } );
+		push( @aliases , @{ $self->SortCommands( $commands[$$self]{'UNIVERSAL'} )  } );
 	}
 	elsif ( @{$c} == 1 )
 	{
@@ -740,10 +748,10 @@ sub ListCommands {
 			push( @aliases , @{ $self->SortCommands( $commands[$$self]{ $c->[0] } ) } );
 		}
 
-# There are no universals allowed at this level currently
-#		elsif ( defined( $commands[$$self]{ '*U' } ) )
+# There are no groups allowed at this level currently
+#		elsif ( defined( $commands[$$self]{ 'GROUP' } ) )
 #		{
-#			$aliases =  $self->SortCommands( $commands[$$self]{ '*U' } );
+#			$aliases =  $self->SortCommands( $commands[$$self]{ 'GROUP' } );
 #		}
 	}
 	elsif ( @{$c} == 2 )
@@ -753,9 +761,9 @@ sub ListCommands {
 			push( @aliases , @{ $self->SortCommands( $commands[$$self]{ $c->[0] }{ $c->[1] } ) } );
 		}
 
-		if ( defined( $commands[$$self]{ $c->[0] }{ '*U' } ) )
+		if ( defined( $commands[$$self]{ $c->[0] }{ 'GROUP' } ) )
 		{
-			push( @aliases , @{$self->SortCommands( $commands[$$self]{ $c->[0] }{ '*U' } ) } );
+			push( @aliases , @{$self->SortCommands( $commands[$$self]{ $c->[0] }{ 'GROUP' } ) } );
 		}
 	}
 	elsif ( @{$c} == 3 )
@@ -765,9 +773,9 @@ sub ListCommands {
 			push( @aliases , @{ $self->SortCommands( $commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] } ) } );
 		}
 
-		if ( defined( $commands[$$self]{ $c->[0] }{ $c->[1] }{ '*U' } ) )
+		if ( defined( $commands[$$self]{ $c->[0] }{ $c->[1] }{ 'GROUP' } ) )
 		{
-			push( @aliases , @{ $self->SortCommands( $commands[$$self]{ $c->[0] }{ $c->[1] }{ '*U' } ) } );
+			push( @aliases , @{ $self->SortCommands( $commands[$$self]{ $c->[0] }{ $c->[1] }{ 'GROUP' } ) } );
 		}
 	}
 	elsif ( @{$c} == 4 )
@@ -776,9 +784,9 @@ sub ListCommands {
 		{
 			push( @aliases , @{ $self->SortCommands( $commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] }{ $c->[3] } ) } );
 		}
-		if ( defined( $commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] }{ '*U' } ) )
+		if ( defined( $commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] }{ 'GROUP' } ) )
 		{
-			push( @aliases , @{ $self->SortCommands( $commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] }{ '*U' } ) } );
+			push( @aliases , @{ $self->SortCommands( $commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] }{ 'GROUP' } ) } );
 		}
 	}
 
@@ -810,9 +818,10 @@ sub ListCommands {
 	return(\%cmds, $txt, $code);
 }
 
-=head2 RegisterCommand
+=item RegisterCommand
 
-RegisterCommand is an internal object method used to Register Agent::TCLI::Package::Command objects directly, rather than a RawCommands hash. Currenly this is reserved for future use.
+RegisterCommand is an internal object method used to Register
+Agent::TCLI::Package::Command objects directly.
 
 =cut
 
@@ -841,9 +850,11 @@ sub RegisterCommand {
     return 1;
 }
 
-=head2 RegisterPackage
+=item RegisterPackage
 
-RegisterPackage is an internal object method used to register and entire package of commands. It calls the Package's RawCommands method to get the list of commands that need to be registered.
+RegisterPackage is an internal object method used to register and entire
+package of commands. It calls the Package's RawCommands method
+to get the list of commands that need to be registered.
 
 =cut
 
@@ -894,7 +905,7 @@ sub RegisterPackage {
 	return $txt;
 }
 
-=head2 _start
+=item _start
 
 POE event to load up any initialization routines for commands.
 
@@ -965,7 +976,7 @@ sub _start {
 
 } # End sub start
 
-=head2 stop
+=item stop
 
 Poe state that is mostly just a placeholder.
 
@@ -977,10 +988,11 @@ sub _stop {
     return ('_stop '.$self->id )
 }
 
-=head2 shutdown
+=item shutdown
 
 POE event to forcibly shutdown the CLI control. It will call the stops for
-all registered commnds that requested them. This probably is not necessary, as their sessions will clean up after themselves.
+all registered commnds that requested them. This probably is not necessary,
+as their sessions will clean up after themselves.
 
 =cut
 
@@ -997,7 +1009,7 @@ sub _shutdown {
     $kernel->alias_remove( $id[$$self] );
 }
 
-=head2 ControlAddState
+=item ControlAddState
 
 POE Event handler that allows new state registrations.
 
@@ -1009,9 +1021,11 @@ sub ControlAddState {
     $kernel->state( $command, $coderef, $method );
 }
 
-=head2 ChangeContext
+=item ChangeContext
 
-Poe state that is used the handle all context changes. If a Command needs to change the context, this is how to do it. The only argument is a string instructing how to change the context.
+Poe state that is used the handle all context changes. If a Command needs to
+change the context, this is how to do it. The only argument
+is a string instructing how to change the context.
 
 '/' changes to root context.
 '..' goes back one context
@@ -1019,7 +1033,8 @@ Poe state that is used the handle all context changes. If a Command needs to cha
 
 No verification is done to see that a reasonable context results from this.
 
-Usually there is no need for a command to directly access change context, as the Command::Base establish_context state will be able to handle most needs.
+Usually there is no need for a command to directly access change context,
+as the Command::Base establish_context state will be able to handle most needs.
 
 =cut
 
@@ -1036,7 +1051,7 @@ sub ChangeContext {
 	else
 	{
 	    # In case someone forgets and gives us a bad context, set to root.
-	    $context = '/' if ( !defined ($context) or $context !~ /\S+/ );
+	    $context = 'ROOT' if ( !defined ($context) or $context !~ /\S+/ );
 
 	    # Store the new context
 		if ($context eq '..')
@@ -1045,7 +1060,7 @@ sub ChangeContext {
 		}
 		elsif ( $context eq '/' )
 		{
-		    $self->context(['/']);
+		    $self->context(['ROOT']);
 		}
 		else
 		{
@@ -1062,7 +1077,7 @@ sub ChangeContext {
 	$request->Respond($kernel, "Context now: ".$self->print_context );
 }
 
-=head2 control_presence
+=item control_presence
 
 This is very transport specific, and I'm not sure how to handle presence quite yet.
 
@@ -1076,11 +1091,15 @@ sub control_presence {
 
 }
 
-=head2 Execute
+=item Execute
 
-POE event Execute is the main event handler for incoming reuqests. Transports should send command requests to Execute. The can be either plain text as entered by the user or request objects.
+POE event Execute is the main event handler for incoming reuqests.
+Transports should send command requests to Execute. The can be either
+plain text as entered by the user or request objects.
 
-Usage: $kernel->post( 'Control' => 'Execute' => $input );
+Usage:
+
+	$kernel->post( 'Control' => 'Execute' => $input );
 
 =cut
 
@@ -1270,9 +1289,10 @@ sub Execute {
 
 } #end sub Execute
 
-=head2 DoSub
+=item DoSub
 
-This internal object method performs the actual execution of commands that are only small subs.
+This internal object method performs the actual execution of commands
+that are only small subs.
 
 =cut
 
@@ -1295,7 +1315,7 @@ sub DoSub {
 	return ($txt, 200);
 }
 
-=head2 AsYouWished
+=item AsYouWished
 
 This POE state takes a text reply to a transaction and returns it to the proper
 transport for sending to the user. This has been somewhat deprecated by
@@ -1342,14 +1362,15 @@ sub AsYouWished {
 
 } #end sub control_AsYouWished
 
-sub control_err {
-	my ($err, $msg) = @_;
-  croak("ERROR: $err -> $msg  \n");
-}
+#sub control_err {
+#	my ($err, $msg) = @_;
+#  croak("ERROR: $err -> $msg  \n");
+#}
 
-=head2 general
+=item general
 
-A POE event to handle some general commands such as context and status. It expects a request object parameter.
+A POE event to handle some general commands such as context and status.
+It expects a request object parameter.
 
 =cut
 
@@ -1380,11 +1401,15 @@ sub general {
 	}
 	elsif ($command eq 'status')
 	{
-		$txt .= "This command is in ".__PACKAGE__." v".$VERSION."\n";
-		$txt .= "running inside ".$0."\n";  # with procecss id ".getppid()."\n";
+		$txt .= "This is a ".__PACKAGE__." v".$VERSION."\n";
+		$txt .= "running inside ".$0.".\n";  # with procecss id ".getppid()."\n";
+		$txt .= "My IP address is ".$self->local_address.".\n" if defined($self->local_address);
 		$txt .= "This console was spawned at ".$time.".\n";
-		foreach my $cmdpkg ( @{ $packages[$$self] } ) {
-			$txt .= "\tPackage ".$cmdpkg." is loaded. \n";
+		foreach my $cmdpkg ( @{ $packages[$$self] } )
+		{
+			my $subtxt = "$cmdpkg";
+			$subtxt =~ s/=.*//;
+			$txt .= "\tPackage ".$subtxt." is loaded. \n";
 		}
 		$txt .= "You are ".$user[$$self]->get_name()." and you have "
 			.$self->auth()." authorization \n ";
@@ -1418,9 +1443,45 @@ sub general {
 
 } #end sub general
 
-=head2 help
+=item net
 
-A POE event to handle some help requests. It expects a request object parameter.
+A POE event to execute the net commands. Takes a request object as an ARG0.
+The only command it handles currently is I<ip>. This will respond with the
+local_address if defined.
+
+=cut
+
+sub net {
+    my ($kernel,  $self, $request, ) =
+      @_[KERNEL, OBJECT,     ARG0, ];
+
+	my $command = $request->command->[0];
+	my ($txt, $code);
+
+    $self->Verbose("net: command($command)");
+
+	if ( $command eq 'ip' )
+	{
+		if (defined($self->local_address))
+		{
+			$txt = $self->local_address;
+			$code = 200;
+		}
+		else
+		{
+			$txt = 'Local ip address is undefined.' ;
+			$code = 400;
+		}
+	}
+
+    $request->Respond( $kernel, $txt, $code );
+    return ();
+} #end sub exit
+
+=item help
+
+A POE event to execute the help command. Takes a request object as an ARG0.
+Responds with the properly formatted help output.
 
 =cut
 
@@ -1451,7 +1512,7 @@ sub help {
 	            	);
 	        }
  		}
-    	($cmds, , ) = $self->ListCommands(['*']);
+    	($cmds, , ) = $self->ListCommands(['UNIVERSAL']);
  		if ( $code == 200 )
  		{
 	    	$txt .= "\nThe following global commands are available. \n";
@@ -1467,7 +1528,7 @@ sub help {
 	# Just the globals please
     elsif( $request->args->[0] =~ /global/i )
     {
-    	($cmds, $txt, $code ) = $self->ListCommands(['*']);
+    	($cmds, $txt, $code ) = $self->ListCommands(['UNIVERSAL']);
  		if ( $code == 200 )
  		{
 	    	$txt .= "\nThe following global commands are available. \n";
@@ -1521,6 +1582,13 @@ sub help {
 
 	$request->Respond($kernel, $txt, $code );
 } #end sub help
+
+=item manual
+
+A POE event to execute the manual command. Takes a request object as an ARG0.
+Responds with the properl formatted manual output.
+
+=cut
 
 sub manual {
     my ($kernel,  $self, $sender, $request,) =
@@ -1652,10 +1720,10 @@ sub manual {
 
 } #end sub manual
 
+=item exit
 
-=head2 exit
-
-A POE event to handle context shift commands exit and /. It expects a request object parameter.
+A POE event to handle context shift commands exit and /.
+It expects a request object parameter.
 
 =cut
 
@@ -1683,9 +1751,10 @@ sub exit {
     return ();
 } #end sub exit
 
-=head2 dumpcmd
+=item dumpcmd
 
-A POE event to handle some debugging in band. It expects a request object parameter.
+A POE event to handle some debugging in band.
+It expects a request object parameter.
 
 =cut
 
@@ -1755,7 +1824,7 @@ sub dumpcmd {
 #	$request->Respond( $kernel,  $txt );
 #} #end sub listcmd
 
-=head3 print_context
+=item print_context
 
 An object method to get the current context in string form. It has no parameters.
 
@@ -1766,7 +1835,7 @@ sub print_context {
 	return ( join(' ', @{$context[$$self]} ) );
 } # End sub print_context
 
-=head3 push_context
+=item push_context
 
 An private object method to push onto the current context. It has no parameters.
 
@@ -1775,7 +1844,7 @@ An private object method to push onto the current context. It has no parameters.
 sub push_context # :Restricted   How can I test with Restricted or Private?
 {
 	my ($self, $context) = @_;
-	if ( $self->print_context eq '/' && $context ne '/' )
+	if ( $self->print_context eq 'ROOT' && $context ne '/' )
 	{
 		$self->context( [$context] );
 		return (1);
@@ -1783,7 +1852,7 @@ sub push_context # :Restricted   How can I test with Restricted or Private?
 	elsif ( $context eq '/' )
 	{
 		# TODO create error instead of overwrite existing context.
-		$self->context( ['/'] );
+		$self->context( ['ROOT'] );
 		# Root is a null context
 		return (0);
 	}
@@ -1794,7 +1863,7 @@ sub push_context # :Restricted   How can I test with Restricted or Private?
 
 }
 
-=head3 pop_context
+=item pop_context
 
 An private object method to pop from the current context. It has no parameters.
 
@@ -1807,21 +1876,23 @@ sub pop_context # :Restricted
 	# context should never be empty. Make root if empty.
 	if ( scalar( @{$context[$$self]} ) == 0 )
 	{
-		$self->context( ['/'] );
+		$self->context( ['ROOT'] );
 	}
 	return ($context);
 }
 
-=head3 depth_context
+=item depth_context
 
-An object method to return the context depth. It has no parameters. If the context is root ('/') context depth wil return 0 even though context [0] is populated with '/'.
+An object method to return the context depth. It has no parameters.
+If the context is root ('ROOT') context depth wil return 0 even
+though context [0] is populated with 'ROOT'.
 
 =cut
 
 sub depth_context {
 	my $self = shift;
 	my $depth;
-	if ( $self->context->[0] eq '/' )
+	if ( $self->context->[0] eq 'ROOT' )
 	{
 		$depth = 0;
 	}
@@ -1832,9 +1903,10 @@ sub depth_context {
 	return ( $depth );
 }
 
-=head3 _default
+=item _default
 
-A POE event handler to handle events gone astray. Only does something when verbose is turned on.
+A POE event handler to handle events gone astray. Only does something
+when verbose is turned on.
 
 =cut
 
@@ -1857,7 +1929,7 @@ sub _default {
   return(0);
 }
 
-=head3 _default_commands
+=item _default_commands
 
 A private object method that has all the default commands.
 The ones we just can't live without. Well, maybe not all the ones we can't
@@ -1874,7 +1946,7 @@ sub _default_commands :Private {
         'usage' 	=> 'echo <something> or /echo ...',
         'topic' 	=> 'general',
         'command' 	=> 'pre-loaded',
-        'contexts'  => {'*' => 'echo'},
+        'contexts'  => {'UNIVERSAL' => 'echo'},
         'call_style'=> 'state',
         'handler'	=> 'general'
     ),
@@ -1884,7 +1956,7 @@ sub _default_commands :Private {
         'usage'     => 'Hi/Hello',
         'topic'     => 'general',
         'command' 	=> 'pre-loaded',
-        'contexts'  => {'/' => [ qw(Hi hi Hello hello)]},
+        'contexts'  => {'ROOT' => [ qw(Hi hi Hello hello)]},
         'call_style'=> 'state',
         'handler'	=> 'general'
     ),
@@ -1906,7 +1978,7 @@ sub _default_commands :Private {
         	"Though it may make the Unix geeks happy, they should remember that this is not a file directory structure that one is navigating within.",
         'topic'    	=> 'general',
         'command' 	=> 'pre-loaded',
-        'contexts' 	=> {'*' => [ qw( context pwd ) ]},
+        'contexts' 	=> {'UNIVERSAL' => [ qw( context pwd ) ]},
         'call_style'=> 'state',
         'handler'	=> 'general'
     ),
@@ -1916,7 +1988,7 @@ sub _default_commands :Private {
         'usage'     => 'Verbose',
         'topic'    	=> 'admin',
         'command' 	=> 'pre-loaded',
-        'contexts' 	=> {'*' => 'Verbose'},
+        'contexts' 	=> {'UNIVERSAL' => 'Verbose'},
         'call_style'=> 'state',
         'handler'	=> 'general'
     ),
@@ -1926,7 +1998,7 @@ sub _default_commands :Private {
         'usage' 	=> 'debug_request <some other args>',
         'topic' 	=> 'admin',
         'command' 	=> 'pre-loaded',
-        'contexts'  => {'*' => 'debug_request'},
+        'contexts'  => {'UNIVERSAL' => 'debug_request'},
         'call_style'=> 'state',
         'handler'	=> 'general'
     ),
@@ -1937,7 +2009,7 @@ sub _default_commands :Private {
         'manual'	=> 'The help command provides summary information about running a command and the parameters the command accepts. Help with no arguments will list the currently available commands. Help is currently broken in that it only operates within the existing context and cannot be called with a full context.',
         'topic'		=> 'general',
         'command' 	=> 'pre-loaded',
-        'contexts'	=> {'*' => 'help'},
+        'contexts'	=> {'UNIVERSAL' => 'help'},
         'call_style'=> 'state',
         'handler'	=> 'help'
     ),
@@ -1948,7 +2020,7 @@ sub _default_commands :Private {
         'manual'	=> 'The manual command provides detailed information about running a command and the parameters the command accepts. Manual is currently broken in that it only operates within the existing context and cannot be called with a full context.',
         'topic'		=> 'general',
         'command' 	=> 'pre-loaded',
-        'contexts'	=> {'*' => ['manual', 'man'] },
+        'contexts'	=> {'UNIVERSAL' => ['manual', 'man'] },
         'call_style'=> 'state',
         'handler'	=> 'manual'
     ),
@@ -1958,7 +2030,7 @@ sub _default_commands :Private {
         'usage' 	=> 'status or /status',
         'topic' 	=> 'general',
         'command' 	=> 'pre-loaded',
-        'contexts'	=> {'*' => 'status'},
+        'contexts'	=> {'UNIVERSAL' => 'status'},
         'call_style'=> 'state',
         'handler'	=> 'general'
     ),
@@ -1973,7 +2045,7 @@ sub _default_commands :Private {
         	"Using '/exit' or '/help' should always work. The example package Eliza is known to have trouble saying Goodbye and exiting properly.",
         'topic'     => 'general',
         'command'   => 'pre-loaded',
-        'contexts'  => { '*' => ['/','root'] },
+        'contexts'  => { 'UNIVERSAL' => ['/','root'] },
         'call_style'=> 'state',
         'handler'	=> 'exit',
     ),
@@ -1991,7 +2063,7 @@ sub _default_commands :Private {
 #        'usage'     => 'listcmd (<context>)',
 #        'topic'     => 'admin',
 #        'command'   => 'pre-loaded',
-#        'contexts'   => {'*'},
+#        'contexts'   => {'UNIVERSAL'},
 #        'call_style'     => 'state',
 #        'handler'	=> 'listcmd',
 #    },
@@ -2001,7 +2073,7 @@ sub _default_commands :Private {
         'usage'     => 'dumpcmd <cmd>',
         'topic'     => 'admin',
         'command'   => 'pre-loaded',
-        'contexts'  => {'*' => 'dumpcmd'},
+        'contexts'  => {'UNIVERSAL' => 'dumpcmd'},
         'call_style'=> 'state',
         'handler'	=> 'dumpcmd',
     ),
@@ -2010,7 +2082,7 @@ sub _default_commands :Private {
         'help' 		=> 'Nothing is as it seems',
         'usage'     => 'nothing',
         'topic'     => 'general',
-        'contexts'  => {'/' => 'nothing'},
+        'contexts'  => {'ROOT' => 'nothing'},
         'command'   =>  sub { return ("You said nothing, try help") },
         'call_style'=> 'sub',
     ),
@@ -2022,21 +2094,37 @@ sub _default_commands :Private {
         	"Unless otherwise noted, leaving a context does not normally clear out any default settings that were established in that context. \n\n",
         'topic'     => 'general',
         'command'   => 'pre-loaded',
-        'contexts'  => {'*' => [ qw(exit ..)] },
+        'contexts'  => {'UNIVERSAL' => [ qw(exit ..)] },
         'call_style'=> 'state',
         'handler'	=> 'exit',
+    ),
+	 'ip' => Agent::TCLI::Command->new(
+        'name'      => 'ip',
+        'help' 		=> 'Returns the local ip address',
+        'usage'     => 'ip',
+        'topic'     => 'net',
+        'command' 	=> 'pre-loaded',
+        'contexts'  => {'ROOT' => 'ip' },
+        'call_style'=> 'state',
+        'handler'	=> 'net'
     ),
 	};
 	return ( $dc );
 }
 
-=head3 automethod
+=item _automethod
 
-Some transports may need to store extra state information related to the control. Rather than force them to maintain some sort of lookup table, the Control object can have attributes generated on the fly. This operates the same as for Request objects and within the transports themselves. It is exected that the Transport documentation will describe what is being stored in the Control.
+Some transports may need to store extra state information related to the
+control. Rather than force them to maintain some sort of lookup table,
+the Control object can have attributes generated on the fly.
+This operates the same as for Request objects and within the
+transports themselves. It is exected that the Transport
+documentation will describe what is being stored in the Control.
 
 =cut
 
 1;
+=back
 
 =head3 INHERITED METHODS
 

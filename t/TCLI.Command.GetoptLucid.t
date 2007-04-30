@@ -1,8 +1,7 @@
 #!/usr/bin/env perl
-# $Id: TCLI.Command.GetoptLucid.t 40 2007-04-01 01:56:43Z hacker $
+# $Id: TCLI.Command.GetoptLucid.t 57 2007-04-30 11:07:22Z hacker $
 
-use Test::More qw(no_plan);
-use lib 'blib/lib';
+use Test::More tests => 36;
 use Agent::TCLI::Parameter;
 use Agent::TCLI::Request;
 use Getopt::Lucid;
@@ -43,11 +42,12 @@ my $paramint = Agent::TCLI::Parameter->new(
 );
 
 my $paramA = Agent::TCLI::Parameter->new(
-    constraints => ['ASCII'],
-    help => "some text for a parameter",
-    manual => 'This parameter is used to to test the Command package.',
-    name => 'paramA',
-    type => 'Param',
+    constraints	=> ['ASCII'],
+    help 		=> "some text for a parameter",
+    manual 		=> 'This parameter is used to to test the Command package.',
+    name		=> 'paramA',
+    type 		=> 'Param',
+    default 	=> 'default',
 );
 
 
@@ -81,7 +81,6 @@ my %cmd2 = (
 	        	},
 			'verbose' 	=> 0,
 );
-
 
 #use warnings;
 #use strict;
@@ -160,4 +159,20 @@ $opt2 = $test2->Validate($poe_kernel, $request);
 
 is($opt2->{'paramA'},'AAAAA',"$testee paramA ok");
 is($opt2->{'test_verbose'},1,"$testee verbose ok");
+
+# Validate with no args
+$request->args([ ]);
+
+$opt1 = $test1->Validate($poe_kernel, $request);
+
+is($opt1->{'paramint'},undef,"$testee paramint ok");
+is($opt1->{'test_verbose'},undef,"$testee verbose ok");
+
+$request->args([ ]);
+
+$opt2 = $test2->Validate($poe_kernel, $request);
+
+# Can't test for defaults without a package, so this is still undef
+is($opt2->{'paramA'},undef,"$testee paramA ok");
+is($opt2->{'test_verbose'},undef,"$testee verbose ok");
 

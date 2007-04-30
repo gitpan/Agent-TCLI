@@ -1,4 +1,4 @@
-# $Id: XMPP.pm 41 2007-04-01 02:01:08Z hacker $
+# $Id: XMPP.pm 54 2007-04-26 21:37:55Z hacker $
 package Agent::TCLI::Transport::XMPP;
 
 =pod
@@ -13,33 +13,7 @@ todo
 
 =head1 DESCRIPTION
 
-=over
-
-=back
-
 =head1 GETTING STARTED
-
-=head2 DEFINING COMMANDS
-
-=over 4
-
-=item * args
-
-=back
-
-=head2 LAUNCHING THE CONTROL
-
-=over 4
-
-=item * commands
-
-=item * hostname
-
-=item * appname
-
-=back
-
-=head2 SHUTTING DOWN
 
 =cut
 
@@ -50,6 +24,7 @@ use Date::Parse;
 
 use POE;
 use Net::Jabber;
+use Socket;
 use Agent::TCLI::Control;
 use Agent::TCLI::Request;
 require Agent::TCLI::Transport::Base;
@@ -57,16 +32,20 @@ require Agent::TCLI::Transport::Base;
 use Object::InsideOut qw( Agent::TCLI::Transport::Base );
 use Params::Validate qw(validate_with);
 
-sub VERBOSE () { 2 }
+sub VERBOSE () { 0 }
 
-our $VERSION = '0.'.sprintf "%04d", (qw($Id: XMPP.pm 41 2007-04-01 02:01:08Z hacker $))[2];
+our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: XMPP.pm 54 2007-04-26 21:37:55Z hacker $))[2];
+
+=head1 INTERFACE
 
 =head2 ATTRIBUTES
 
-The following attributes are accessible through standard get_ or set_
+The following attributes are accessible through standard accessor/mutator
 methods and may be set as a parameter to new unless otherwise noted.
 
-=head3 jid
+=over
+
+=item jid
 
 xmpp id of user we're connecting as'
 B<set_jid> will only accept SCALAR type values.
@@ -74,14 +53,14 @@ B<set_jid> will only accept SCALAR type values.
 =cut
 my @jid 	   :Field('All' => 'jid', 'Type' => 'Net::XMPP::JID' );
 
-=head3 jserver
+=item jserver
 
 B<jserver> will only accept SCALAR type values.
 
 =cut
 my @jserver 	   :Field('All' => 'jserver' );
 
-=head3 jpassword
+=item jpassword
 
 The password for the transport to use to log in to the server.
 B<jpassword> will only accept scalar type values.
@@ -89,14 +68,14 @@ B<jpassword> will only accept scalar type values.
 =cut
 my @jpassword  :Field('All' => 'jpassword');
 
-=head3 xmpp_debug
+=item xmpp_debug
 
 Sets the debug (verbosity) level for the XMPP libraries
 
 =cut
 my @xmpp_debug			:Field  :All('xmpp_debug');
 
-=head3 xmpp_process_time
+=item xmpp_process_time
 
 Sets the time in seconds to wait before calling XMPP Process to look for
 more XMPP data. Should be near 1.
@@ -104,7 +83,7 @@ more XMPP data. Should be near 1.
 =cut
 my @xmpp_process_time			:Field  :All('xmpp_process_time');
 
-=head3 peers
+=item peers
 
 An array of peers
 B<set_peers> will only accept ARRAYREF type values.
@@ -115,7 +94,7 @@ B<set_peers> will only accept ARRAYREF type values.
 # Holds the XMPP connection session
 my @xmpp	 	   :Field('Get' => 'xmpp');
 
-=head3 connection_retries
+=item connection_retries
 
 A max number to retry connection before giving up.
 B<connection_retries> will only accept NUMERIC type values.
@@ -127,7 +106,7 @@ my @connection_retries
 			:Acc('connection_retries')
 			:Type('NUMERIC' );
 
-=head3 connection_delay
+=item connection_delay
 
 How long to wait beteen connection attempts when failed. Defaults to 30 seconds.
 B<connection_delay> will only accept NUMERIC type values.
@@ -139,7 +118,7 @@ my @connection_delay
 			:Acc('connection_delay')
 			:Type('NUMERIC' );
 
-=head3 roster
+=item roster
 
 Holds the Net::XMPP::Roster if enabled. To enable the roster,
 a paramater of 'roster' => 1, must be passed in with new.
@@ -149,7 +128,7 @@ B<roster> will contain a Net::XMPP::Roster object after initialization if enable
 my @roster			:Field
 					:All('roster');
 
-=head3 server_time
+=item server_time
 
 The time at the server. Useful for determining if messages were sent before we started up.
 B<server_time> should only contain hash values.
@@ -159,7 +138,7 @@ my @server_time		:Field
 #					:Type('hash')
 					:All('server_time');
 
-=head3 group_mode
+=item group_mode
 
 The default setting to determine how to interact with groups. Options are:
 'all' - process everything said in room
@@ -174,7 +153,7 @@ my @group_mode		:Field
 					:Arg('name'=>'group_mode', 'Default' => 'named' )
 					:Acc('group_mode');
 
-=head3 group_prefix
+=item group_prefix
 
 The group_prefix used for group moded prefixed.
 B<group_prefix> should only contain a single scalar value.
@@ -206,7 +185,7 @@ sub u_is_int {
                  (int($arg) == $arg));
      }
 
-sub preinit :Preinit {
+sub _preinit :Preinit {
 	my ($self, $args) = @_;
 
 	$args->{'alias'} = 'transport_xmpp' unless defined( $args->{'alias'} );
@@ -257,7 +236,7 @@ sub preinit :Preinit {
 
 }
 
-sub spawn :Init {
+sub _init :Init {
 	my ($self, $args) = @_;
 # Validate deep arguments
 #    $self->Verbose("Validating arguments \n" ,1);
@@ -275,7 +254,13 @@ sub spawn :Init {
 
 }
 
-=head2 start
+=back
+
+=head2 METHODS
+
+=over
+
+=item start
 
 Get things rolling. Starts up a POE::Component::Jabber::Client using the user
 provided config info.
@@ -353,7 +338,7 @@ sub _start {
 	return ($self->alias."_start whohoo");
 } # End sub start
 
-=head2 stop
+=item stop
 
 Mostly just a placeholder.
 
@@ -366,7 +351,7 @@ sub _stop {
 	return ($self->alias."_stop whohoo");
 }
 
-=head2 shutdown
+=item shutdown
 
 Forcibly shutdown
 
@@ -464,7 +449,7 @@ sub Disconnected {
 
 } #end sub Disconnected
 
-=head2 JoinPeerRooms
+=item JoinPeerRooms
 
 This POE event handler will go through each of the users in the peers array,
 and if the peers is a groupchat, join the conference room. It will check to
@@ -577,6 +562,9 @@ sub Online {
 		$self->set(\@roster, $self->xmpp->Roster);
 	}
 
+	$self->control_options->{'local_address'} = $self->Address
+		unless defined($self->control_options->{'local_address'});
+
 	$kernel->delay_set( 'Process' => $xmpp_process_time[$$self] );
 
     $kernel->yield('send_presence',(
@@ -589,9 +577,7 @@ sub Online {
 
 } #end sub Online
 
-=head2 Process (    )
-
-=head3 Description
+=item Process (    )
 
 This event interfaces with the XMPP Process to have it check for new data
 
@@ -794,7 +780,7 @@ sub recvmsgHeadline {
 	my ($kernel,  $self, $jSessionID, $response) =
 	  @_[KERNEL, OBJECT,        ARG0,      ARG1 ];
 	my $msg = $response->[1];
-	return unless $self->not_authorized(
+	return unless $self->authorized(
 	  	$msg->GetFrom('jid'),
 	  	);
 	my $input = $msg->GetBody;
@@ -811,7 +797,7 @@ sub recvmsgError {
 
 	$self->Verbose("recvmsgError packet");
 
-	return unless $self->not_authorized
+	return unless $self->authorized
 	(
   		$msg->GetFrom('jid'),
   	);
@@ -1048,9 +1034,11 @@ sub TransmitRequest {
 	# Create new msg
 	my $msg = Net::XMPP::IQ->new();
 
-	# addressee must have resource. For now, everybody should be tcli.
+	# addressee must have resource, default to /tcli if not provided
+	$addressee .= '/tcli' unless ($addressee =~ qr(/) );
+
 	$msg->SetIQ (
-		'to'	=> $addressee.'/tcli',
+		'to'	=> $addressee,
 		'from'	=> $self->jid,
 		'type'	=> 'get',
 	);
@@ -1153,7 +1141,7 @@ sub recv_exit {
 	$kernel->delay_set('Disconnected',30, 1 );
 } #end sub recv_exit
 
-=head3 send_presence
+=item send_presence
 
 Sends a xmpp presence message. See Net::XMPP::Presence for parameter details.
 
@@ -1202,7 +1190,7 @@ sub send_presence {
   return;
 }  # end end_pres
 
-=head3 send_message
+=item send_message
 
 Sends a xmpp message for a control. Takes the thread and the messaage as parameters. It will overwrite the control->send attribute text with the message parameter.
 
@@ -1244,73 +1232,9 @@ sub send_message {
 
 } # end sub xmpp_send_msg
 
-=head2 not_authorized ( { parameters (see usage) } )
-
-Checks to see if a id is authorized to use us. Returns 1 if user is
-authorized, 0 if id is not a match, and -1 if id a match,
-but auth does not match.
-
-=head3 Description
-
-description
-
-=head3 Usage
-
-$self->not_authorized ( <Net:XMPP:JID>,  qr(master|writer),   # option regex for auth
-				} );
-
-=cut
-
-#sub not_authorized {
-#  my ($self, $id, $auth, $protocol) = @_;
-#  $auth = defined($auth) ? $auth : qr(.*);
-#  $protocol = defined($protocol) ? $protocol : qr(.*);
-#  $self->Verbose("not_authorized: id(".$id->GetJID('full').") auth($auth) protocol($protocol)",2);
-#
-#  # Self with resource is always authorized for anything currently
-#  # This should be OK if server is trustworthy.
-#
-#  return ( 1 ) if ( $id->GetJID('full') eq $self->jid->GetJID('full') );
-#
-#  # create a blank user as kludge to simply debugging output.
-#  # This might be a slow memory exhaustion for lots of auth checks
-#  # if they are not getting cleand up properly
-#  my $authorized = 	Agent::TCLI::User->new(
-#		'id'		=> 'no one',
-#		'protocol'	=> 'none',
-#		'auth'		=> 'nil',
-#	),
-#  ;
-#
-#  # only one should match on id and we get 0 on non id match,
-#  # so we'll just add through the whole loop of authorized peers
-#  # and add up the total.
-#  # send only the base with no resource.
-#
-#  foreach my $pid ( @{$peers[$$self]} ) {
-#
-#	$self->Verbose("not_authorized: Checking peer ".$pid->id,3);
-#
-#  	if ( $pid->not_authorized ( {
-#  		id	   		=>  $id->GetJID('base'),
-#		protocol 	=>  $protocol,
-#		auth		=>  $auth,
-#		} ) ) {
-#		# Set authorized to last matched user
-#		$authorized = $pid;
-#	}
-#  } #end foreach peer
-#
-#  $self->Verbose("not_authorized:  ".$id->GetJID('full')." auth check got ".$authorized->id()." \n",1);
-#
-#  return ($authorized)
-#} # End not_authorized
-
-=head2 GetControlForNode (  node  )
+=item GetControlForNode (  node  )
 
 Determines the control from a node and returns the control object.
-
-=head3 Description
 
 Takes a node parameter and returns the hash key to the proper control
 object in the controls array. If the control object is not in the array,
@@ -1318,10 +1242,6 @@ it will add it.
 
 When a new control object is created, a new Control session must be started
 for the control and that is handled here as well.
-
-=head3  Usage
-
-$self->GetControlForNode($node)
 
 =cut
 
@@ -1341,16 +1261,6 @@ sub GetControlForNode {
 
 	# or to self in chatroom
 	return if ( $user->GetResource eq $self->jid->GetUserID );
-
-#Moved auth to getcontrol
-#	# send only the base with no resource for auth
-#	my $auth_user = $self->not_authorized (
-#	  	$user->GetJID('base'),
-#	  	qr(.*),
-#	  	$user_protocol,
-#	  	);
-#
-#	return if ( $auth_user->id eq 'no one' );
 
 	$self->Verbose("GetControlForNode: type(".$type.") user(".$user->GetJID('full').") \n");
 
@@ -1406,7 +1316,7 @@ sub GetControlForNode {
 
 } # End GetControlForNode
 
-=head2 Peers
+=item Peers
 
 This POE event handler performs the transport end of the peer manipulation
 commands, such as add peer. It takes an action, a User object and an optional
@@ -1487,63 +1397,43 @@ sub Peers {
 	}
 }
 
+sub Address {
+	my $self = shift;
+
+	my $sock = $self->xmpp->{STREAM}->GetSock( $self->xmpp->GetStreamID );
+	my ($port, $naddr) = sockaddr_in(getsockname($sock));
+	my $addr = inet_ntoa($naddr);
+
+	$self->Verbose("Address: $addr");
+
+	return ($addr);
+}
 1;
 
 #__END__
 
-=pod
-
-
-=head1 REQUIREMENTS
-
-The following perl modules are required for this module to work properly.
-
-=over 4
-
-=item * Carp
-
-=item * File::Basename
-
-=item * POE
-
-=item * Params::Validate
-
-=item * Sys::Hostname
 
 =back
 
+=head1 AUTHOR
+
+Eric Hacker	 hacker can be emailed at cpan.org
+
 =head1 BUGS
+
+SHOULDS and MUSTS are currently not enforced.
 
 New commands could clobber old ones under certain circumstances.
 
-=head1 AUTHOR
+Test scripts not thorough enough.
 
-Eric Hacker    hacker can be emailed at cpan.org
-
-=head1 REVISION
-
-$LastChangedRevision: 63 $
-
-=head1 DATE
-
-$Date: 2004-05-09 22:59:17 -0400 (Sun, 09 May 2004) $
+Probably many others.
 
 =head1 LICENSE
 
-Copyright (c) 2006, Lucent Technologies
+Copyright (c) 2007, Alcatel Lucent, All rights resevred.
 
-Lucent License here...
-
-THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
-EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+This package is free software; you may redistribute it
+and/or modify it under the same terms as Perl itself.
 
 =cut
-

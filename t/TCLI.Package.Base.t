@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
-# $Id: TCLI.Package.Base.t 40 2007-04-01 01:56:43Z hacker $
+# $Id: TCLI.Package.Base.t 57 2007-04-30 11:07:22Z hacker $
 
-use Test::More qw(no_plan);
+use Test::More tests => 68;
 use lib 'blib/lib';
 use POE;
 
@@ -51,43 +51,62 @@ Agent::TCLI::Parameter:
   constraints:
     - INT
   manual: This is the manual text.
-  type: integer
+  type: Param
   class: numeric
 ...
 
 is($test1->parameters->{'int1'}->name,'int1',"single parameter loaded ok");
 ok($test1->can('int1'),"parameter attribute created ok");
 is($test1->meta->get_methods->{'int1'}{'type'},'numeric', "parameter :Type set ok");
+is($test1->int1,1,"default set OK");
 
 $test1->LoadYaml(<<'...');
 ---
 Agent::TCLI::Parameter:
+  name: scalar1
+  default: some text
+  help: scalar one
+  constraints:
+    - ASCII
+  manual: This is the manual text.
+  type: Param
+...
+
+is($test1->parameters->{'scalar1'}->name,'scalar1',"single parameter loaded ok");
+ok($test1->can('scalar1'),"parameter attribute created ok");
+is($test1->scalar1,'some text', "default set OK");
+
+$test1->LoadYaml(<<'...');
+---
+Agent::TCLI::Parameter:
+  name: int2
   constraints:
     - INT
   help: integer two
   manual: This is the manual text.
-  name: int2
-  type: integer
+  class: numeric
 ---
 Agent::TCLI::Parameter:
+  name: int3
   constraints:
     - INT
   help: integer three
   manual: This is the manual text.
-  name: int3
-  type: integer
+  type: Param
+  class: numeric
 ---
 Agent::TCLI::Parameter:
+  name: int4
   constraints:
     - INT
   help: integer four
-  name: int4
-  type: integer
+  type: Param
   manual: >
    This is some longer manual text that is supposed to be parsed by
    Yaml in this format. It is unclear from the YAML.pm pod how the indenting is
    supposed to be done on this type of text. Also, any use of non
    alpha-numeric charaters is not described.
+  class: numeric
 ---
 Agent::TCLI::Command:
   call_style: session
@@ -127,7 +146,7 @@ Agent::TCLI::Command:
 ---
 Agent::TCLI::Command:
   call_style: state
-  command: test1
+  command: test2
   contexts:
     '/': cmd2
   handler: cmd2
@@ -166,6 +185,8 @@ is($test2->verbose,1, '$test2->verbose get from set');
 is($test1->Verbose("ok"),undef,'$test1->Verbose returns undef');
 like($test2->Verbose("ok"),qr(ok),'$test1->Verbose returns ok');
 
+is($test2->verbose(0),0,'$test2->verbose set 0');
+
 $c1 = $test1->commands;
 # Test commands accessor-mutator methods
 is(ref($c1),'HASH', '$test1->commands accessor from init args');
@@ -183,6 +204,31 @@ is($c1->{'cmd2'}->parameters->{'int1'}->name,'int1','$test1 commands->{cmd2}->pa
 is($c1->{'cmd2'}->parameters->{'int2'}->name,'int2','$test1 commands->{cmd2}->parameters->{int2}->name');
 is($c1->{'cmd2'}->parameters->{'int3'}->name,'int3','$test1 commands->{cmd3}->parameters->{int3}->name');
 is($c1->{'cmd2'}->parameters->{'int4'}->name,'int4','$test1 commands->{cmd2}->parameters->{int4}->name');
+
+$test1->LoadXMLFile();
+
+is($test1->parameters->{'int5'}->name,'int5',"array of parameters loaded ok");
+is($test1->parameters->{'int6'}->name,'int6',"array of parameters loaded ok");
+is($test1->parameters->{'int7'}->name,'int7',"array of parameters loaded ok");
+is($test1->commands->{'show'}->name,'show',"command show loaded ok");
+
+$c1 = $test1->commands;
+# Test commands accessor-mutator methods
+is(ref($c1),'HASH', '$test1->commands accessor from init args');
+
+is(ref($c1->{'cmd4'}),'Agent::TCLI::Command',' $test1->commands{cmd4}  isa Agent::TCLI::Command');
+is(ref($c1->{'cmd5'}),'Agent::TCLI::Command',' $test1->commands{cmd5}  isa Agent::TCLI::Command');
+
+is($c1->{'cmd4'}->name,'cmd4','$test1 commands->{cmd4}->name');
+is($c1->{'cmd5'}->name,'cmd5','$test1 commands->{cmd5}->name');
+
+is($c1->{'cmd4'}->parameters->{'int5'}->name,'int5','$test1 commands->{cmd4}->parameters->{int5}->name');
+is($c1->{'cmd4'}->parameters->{'int6'}->name,'int6','$test1 commands->{cmd4}->parameters->{int6}->name');
+
+is($c1->{'cmd5'}->parameters->{'int1'}->name,'int1','$test1 commands->{cmd5}->parameters->{int1}->name');
+is($c1->{'cmd5'}->parameters->{'int5'}->name,'int5','$test1 commands->{cmd5}->parameters->{int5}->name');
+is($c1->{'cmd5'}->parameters->{'int6'}->name,'int6','$test1 commands->{cmd5}->parameters->{int6}->name');
+is($c1->{'cmd5'}->parameters->{'int7'}->name,'int7','$test1 commands->{cmd5}->parameters->{int7}->name');
 
 my @pass_tests = (
 	['NotNumeric','a',,'Parameter is not a number'],

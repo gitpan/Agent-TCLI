@@ -1,6 +1,6 @@
 package Agent::TCLI::Package::Tail;
 #
-# $Id: Tail.pm 45 2007-04-03 15:51:19Z hacker $
+# $Id: Tail.pm 57 2007-04-30 11:07:22Z hacker $
 #
 =pod
 
@@ -8,29 +8,25 @@ package Agent::TCLI::Package::Tail;
 
 Agent::TCLI::Package::Tail - A Tail command
 
-=head1 VERSION
-
-This document describes <MODULE NAME> version 0.0.1
-
 =head1 SYNOPSIS
 
-# Within a test script
+	# Within a test script
 
-use Agent::TCLI::Package::Tail;
+	use Agent::TCLI::Package::Tail;
 
-# set the list of packages
-my @packages = (
-	Agent::TCLI::Package::Tail->new({
-		'verbose'		=> \$verbose,
-		'do_verbose'	=> sub { diag( @_ ) },
-	}),
-);
+	# set the list of packages
+	my @packages = (
+		Agent::TCLI::Package::Tail->new({
+			'verbose'		=> \$verbose,
+			'do_verbose'	=> sub { diag( @_ ) },
+		}),
+	);
 
 =head1 DESCRIPTION
 
 This module provides a package of commands for the TCLI environment. Currently
 one must use the TCLI environment (or browse the source) to see documentation
-for the commands it supports.
+for the commands it supports within the TCLI Agent.
 
 B<Agent::TCLI::Package::Tail> provides commands to set up filtered tails of files.
 Tails can be established as a I<watch> which will report on every match, or as
@@ -44,22 +40,18 @@ objects which could then be queried if their source addresess was in a range.
 
 =head1 INTERFACE
 
-This module must be loaded into a Agent::TCLI::Control by a Agent::TCLI::Transport in order
-for a user to interface with it.
+This module must be loaded into a Agent::TCLI::Control by an
+Agent::TCLI::Transport in order for a user to interface with it.
 
 =cut
 
 use warnings;
 use strict;
 
-#sub POE::Component::SimpleLog::DEBUG () { 2 }
-
-#require Agent::TCLI::Package::Base;
 use Object::InsideOut qw( Agent::TCLI::Package::Base );
 
 use POE qw(Wheel::FollowTail);
 
-use POE::Component::SimpleLog;
 use Agent::TCLI::Command;
 use Agent::TCLI::Parameter;
 use Agent::TCLI::Package::Tail::Line;
@@ -67,16 +59,18 @@ use Agent::TCLI::Package::Tail::Test;
 
 use Getopt::Lucid qw(:all);
 
-our $VERSION = '0.0.'.sprintf "%04d", (qw($Id: Tail.pm 45 2007-04-03 15:51:19Z hacker $))[2];
+our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Tail.pm 57 2007-04-30 11:07:22Z hacker $))[2];
 
 =head2 ATTRIBUTES
 
 These attrbiutes are generally internal and are probably only useful to
 someone trying to enhance the functionality of this Package module.
+It would be unusual to set any of these attributes on creation of the
+package for an Agent. That doesn't mean you can't.
 
-=cut
+=over
 
-=head3 files
+=item files
 
 A hash of the 'files' being tailed.
 B<files> will only contain hash values.
@@ -86,7 +80,7 @@ my @files			:Field
 					:Type('hash')
 					:All('files');
 
-=head3 line_cache
+=item line_cache
 
 An array for holding the last few lines to enable lookbacks
 B<line_cache> will only contain Array values.
@@ -97,7 +91,7 @@ my @line_cache		:Field
 					:Arg('name'=>'line_cache', 'default' => [ ] )
 					:Acc('line_cache');
 
-=head3 test_queue
+=item test_queue
 
 A queue of all the tests waiting to be activated by triggers
 B<test_queue> will only contain Array values.
@@ -107,10 +101,10 @@ my @test_queue		:Field
 					:Type('Array')
 					:All('test_queue');
 
-=head3 active
+=item active
 
 A hash keyed on num of all the tests currently active.
-B<active> will only contain array values.
+B<active> will only contain hash values.
 
 =cut
 my @active			:Field
@@ -118,7 +112,7 @@ my @active			:Field
 					:Arg('name'=>'active', 'default'=> { '0' => 1 } )
 					:Acc('active');
 
-=head3 ordered
+=item ordered
 
 The default setting for ordered test processing.
 B<ordered> should only contain boolean values.
@@ -129,7 +123,7 @@ my @ordered			:Field
 					:Arg('name'=>'ordered','default'=>0)
 					:Acc('ordered');
 
-=head3 interval
+=item interval
 
 The default interval setting
 B<interval> should only contain integer values.
@@ -140,7 +134,7 @@ my @interval		:Field
 					:Arg('name'=>'interval', 'default'=> 0.05 )
 					:Acc('interval');
 
-=head3 line_max_cache
+=item line_max_cache
 
 Maximum size of the line cache, in lines.
 B<line_max_cache> will only contain numeric values.
@@ -151,7 +145,7 @@ my @line_max_cache	:Field
 					:Arg('name'=>'line_max_cache','default'=>10)
 					:Acc('line_max_cache');
 
-=head3 line_hold_time
+=item line_hold_time
 
 Time to hold lines in the cache, in seconds.
 B<line_hold_time> will only contain numeric values.
@@ -162,7 +156,7 @@ my @line_hold_time	:Field
 					:Arg('name'=>'line_hold_time','default'=>30)
 					:Acc('line_hold_time');
 
-=head3 test_max_lines
+=item test_max_lines
 
 Default setting for how many lines a test will observe before failing. Defaults to zero (unlimited).
 B<test_max_lines> will only contain numeric values.
@@ -173,7 +167,7 @@ my @test_max_lines	:Field
 					:Arg('name'=>'test_max_lines','default'=>10)
 					:Acc('test_max_lines');
 
-=head3 test_match_times
+=item test_match_times
 
 Default setting for how many times a test should match. Default is 1.
 B<test_match_times> will only contain numeric values.
@@ -184,7 +178,7 @@ my @test_match_times :Field
 					:Arg('name'=>'test_match_times','default'=>1)
 					:Acc('test_match_times');
 
-=head3 test_ttl
+=item test_ttl
 
 The default time to live for a test before failing. The default is 0, no expiration.
 B<test_ttl> will only contain numeric values.
@@ -195,7 +189,7 @@ my @test_ttl		:Field
 					:Arg('name'=>'test_ttl','default'=>30)
 					:Acc('test_ttl');
 
-=head3 test_verbose
+=item test_verbose
 
 The default test verbose setting.
 B<test_verbose> will only contain numeric values.
@@ -206,7 +200,7 @@ my @test_verbose	:Field
 					:Arg('name'=>'test_verbose','default'=>0)
 					:Acc('test_verbose');
 
-=head3 test_feedback
+=item test_feedback
 
 The default feedback setting for new tests.
 B<test_feedback> will only contain Numeric values.
@@ -217,7 +211,7 @@ my @test_feedback	:Field
 					:Arg('name'=>'test_feedback','default'=>0)
 					:Acc('test_feedback');
 
-=head3 line_count
+=item line_count
 
 A running count of all the lines seen.
 B<line_count> will only contain numeric values.
@@ -228,7 +222,7 @@ my @line_count		:Field
 					:Arg('name'=>'line_count','default'=>0)
 					:Acc('line_count');
 
-=head3 test_count
+=item test_count
 
 A running count of the tests that have arrived in the queue.
 B<test_count> will only contain numeric values.
@@ -239,7 +233,7 @@ my @test_count		:Field
 					:Arg('name'=>'test_count','default'=>0)
 					:Acc('test_count');
 
-=head3 activated_count
+=item activated_count
 
 A running count of the tests that have been activated.
 B<test_count> will only contain numeric values.
@@ -251,7 +245,7 @@ my @activated_count	:Field
 					:Acc('activated_count');
 
 
-=head3 tests_complete
+=item tests_complete
 
 A running count of the number of tests that have completed.
 B<tests_complete> will only contain numeric values.
@@ -262,444 +256,38 @@ my @tests_complete	:Field
 					:Arg('name'=>'tests_complete','default'=>0)
 					:Acc('tests_complete');
 
+=back
+
 =head2 METHODS
 
 Most of these methods are for internal use within the TCLI system and may
-be of interest only to developers trying to enhance TCLI.
+be of interest only to developers trying to enhance this module.
 
-=head3 preinit
+=over
 
-This private Object::InsideOut (OIO) method is used for object initialization.
+=item Append <input>, <wheel_id>
 
-=cut
-
-sub _preinit :Preinit {
-	my ($self,$args) = @_;
-
-	$args->{'name'} = 'tcli_tail';
-
-  	$args->{'session'} = POE::Session->create(
-      object_states => [
-          $self => [qw(
-          	_start
-          	_stop
-          	_shutdown
-          	_default
-          	_child
-
-			clear
-			establish_context
-			file
-			log
-			show
-			test
-			settings
-
-			Activate
-			Append
-			Check
-			Complete
-			FileReset
-			PruneLineCache
-			SetFollowTailWheel
-			Wally
-
-			)],
-      ],
-  	);
-}
-
-=head3 spawn
-
-This private OIO method is used for object initialization.
-
-=cut
-
-sub _init :Init {
-	my $self = shift;
-
-	$self->LoadYaml(<<'...');
----
-Agent::TCLI::Parameter:
-  name: file
-  help: The full Unix path of the file name.
-  manual: >
-    The full Unix path of the file that will be tailed.
-  type: Param
----
-Agent::TCLI::Parameter:
-  name: filter
-  help: Optional POE::Filter.
-  manual: >
-    A POE::Filter that will be applied by POE::Wheel::FollowTail on the file
-    being tailed.
-  type: Param
----
-Agent::TCLI::Parameter:
-  name: interval
-  help: Seconds to wait between checks.
-  manual: >
-    Seconds to wait between checks.
-  type: Param
----
-Agent::TCLI::Parameter:
-  name: seek
-  help: Seek forward byte count.
-  manual: >
-    The Seek parameter tells Tail how far from the start of the file to start
-    reading. Its value is specified in bytes, and values greater than the
-    file's current size will quietly cause Tail to start from the file's end.
-    A Seek parameter of 0 starts FollowTail at the beginning of the file.
-    A negative Seek parameter emulates SeekBack: it seeks backwards from
-    the end of the file.
-    Seek and SeekBack are mutually exclusive. If Seek and SeekBack are not
-    specified, Tail seeks 4096 bytes back from the end of the file
-    and discards everything until the end of the file. This helps ensure
-    that Tail returns only complete records.
-  type: Param
----
-Agent::TCLI::Parameter:
-  name: seekback
-  help: Seek backwards byte count.
-  manual: >
-    The SeekBack parameter tells Tail how far back from the end of the file
-    to start reading. Its value is specified in bytes, and values greater
-    than the file's current size will quietly cause Tail to start from
-    the file's beginning.
-    A SeekBack parameter of 0 starts Tail at the end of the file.
-    It's recommended to omit Seek and SeekBack to start from the end of a file.
-    A negative SeekBack parameter emulates Seek: it seeks forwards from
-    the start of the file.
-  type: Param
----
-Agent::TCLI::Parameter:
-  name: name
-  help: The name of the test.
-  manual: >
-    The name is purely cosmetic and will be returned with the test results
-    simliarly to the way Test::Simple operates. This might be useful
-    when reporting results to a group chat or log.
-  type: Param
----
-Agent::TCLI::Parameter:
-  name: like
-  help: A regex to match.
-  manual: >
-    Like sets a regular expression for the test to match within a line.
-    The regex should be either a string
-  type: Param
----
-Agent::TCLI::Parameter:
-  name: line_max_cache
-  alaises: max_cache
-  constraints:
-    - UINT
-  help: The maximum number of lines to keep in the line_cache.
-  manual: >
-    The line_max_cache parameter sets how many lines to keep in the line cache.
-    Since actions are asynchronous, it is a good idea to have at least some
-    line cache so that a tail test will work when the action to generate the
-    log ocurred before the test was in place.
-  type: Param
----
-Agent::TCLI::Parameter:
-  name: line_hold_time
-  alaises: hold_time
-  constraints:
-    - UINT
-  help: The time, in seconds, to keep lines in the cache.
-  manual: >
-    The line_hold_time parameter sets how many seconds to keep lines in
-    the line_cache. This is not an exact amount but rather the minimum,
-    The purge_line_cache process does not run every second, but lines that
-    exceeed the hold_time will be purged when it does run.
-  type: Param
----
-Agent::TCLI::Parameter:
-  name: test_max_lines
-  alaises: max_lines
-  help: The maximum number of lines to check before failing.
-  manual: >
-    The max_lines parameter sets how many lines to check before giving up
-    and failing. For tests, the default is ten, which is the default size
-    of the line cache. This means that by default, a test will only check the
-    most recent lines of what is being tailed.
-    For watches, the default is zero, which means it does not ever give up.
-  type: Param
----
-Agent::TCLI::Parameter:
-  name: test_match_times
-  aliases: match_times
-  help: The numer of times the a match must be found.
-  manual: >
-    The match_times parameter sets how many times a line must match
-    in order to pass. For tests, the default is one. For watches, the default is
-    zero, which means it ignores match_times and stays active.
-  type: Param
----
-Agent::TCLI::Parameter:
-  name: test_ttl
-  aliases: ttl
-  help: The time-to-live in seconds.
-  manual: >
-    The ttl parameter sets how many seconds to wait before giving up
-    and failing. For tests, the default is 30. For watches, the default is
-    zero, which means it does not ever expire.
-  type: Param
----
-Agent::TCLI::Parameter:
-  name: ordered
-  help: Set the order for processing tests.
-  manual: >
-    Ordered is a boolean switch indicating how to process the tests. If set
-    a test will not be checked against a line until the previous test has
-    passed. If ordered is off then multiple tests are running, and tests
-    are always processed in the order that they were created. The default
-    ordered setting is off for both tests and watches.
-  type: Switch
----
-Agent::TCLI::Parameter:
-  name: feedback
-  help: Sets the feedback level for what is seen.
-  manual: >
-    Feedback sets the level of additional information about the line that is
-    returned. Currently it is either zero, which is nothing,
-    or one, which returns the whole line. Feedback occurs when a line is
-    matched or if a test is set for verbose. Feedback is set per test, so
-    if multiple tests are active and verbose is one, there is the possibility
-    of seeing the same line more than once. This is useful for debugging
-    a particular test/watch.
-  type: Switch
----
-Agent::TCLI::Parameter:
-  name: test_verbose
-  aliases: verbose|v
-  help: Sets the verbosity level for a test.
-  manual: >
-    Verbose sets the level of additional information about the test that is
-    returned. Currently it is either zero, which is nothing,
-    or one, which enables feedback (if set) on every line that is seen.
-  type: Switch
----
-Agent::TCLI::Parameter:
-  name: cache
-  help: Determines whether the line cache is used.
-  manual: >
-    The line cache will hold the most recent lines seen. This option determines
-    whether to use the line cache or only examine new lines when a test is set.
-    The default for tests is on, and for watches is off. To turn off use
-    no-cache as a test/watch option.
-  type: Switch
----
-Agent::TCLI::Parameter:
-  name: line_cache
-  help: The lines in the cache currently.
-  manual: >
-    The line cache will hold the most recent lines seen. This will show the
-    contents of the line cache.
-  type: Switch
----
-Agent::TCLI::Parameter:
-  name: test_queue
-  help: The tests and watches that have been requested.
-  manual: >
-    The test_queue holds all the tests that have been requested.
-    This could be a very long list.
-  type: Switch
----
-Agent::TCLI::Parameter:
-  name: active
-  help: The tests and watches that are currently active.
-  type: Switch
----
-Agent::TCLI::Command:
-  name: tail
-  call_style: session
-  command: tcli_tail
-  contexts:
-    '/': tail
-  handler: establish_context
-  help: tail a file
-  topic: testing
-  usage: tail file add file /var/log/messages
----
-Agent::TCLI::Command:
-  name: file
-  call_style: session
-  command: tcli_tail
-  contexts:
-    tail: file
-  handler: establish_context
-  help: manipulate files for tailing
-  topic: testing
-  usage: tail file add file /var/log/messages
----
-Agent::TCLI::Command:
-  name: file-add
-  call_style: session
-  command: tcli_tail
-  contexts:
-    tail:
-      file: add
-  handler: file
-  help: designate a file for tailing
-  topic: testing
-  usage: tail file add file /var/log/messages
----
-Agent::TCLI::Command:
-  name: file-delete
-  call_style: session
-  command: tcli_tail
-  contexts:
-    tail:
-      file: delete
-  handler: file
-  help: delete a tailing of a file
-  topic: testing
-  usage: tail file delete file /var/log/messages
----
-Agent::TCLI::Command:
-  name: test
-  call_style: session
-  command: tcli_tail
-  contexts:
-    tail:
-      - test
-      - watch
-  handler: establish_context
-  help: manipulate tests on tails
-  topic: testing
-  usage: tail test add like qr(alert)
----
-Agent::TCLI::Command:
-  name: test-watch-add
-  call_style: session
-  command: tcli_tail
-  contexts:
-    tail:
-      test: add
-      watch: add
-  handler: test
-  help: add a new tests on the tails
-  parameters:
-    feedback:
-    test_match_times:
-    test_max_lines:
-    name:
-    ordered:
-    test_ttl:
-    test_verbose:
-  topic: testing
-  usage: tail test add like qr(alert) <options>
----
-Agent::TCLI::Command:
-  call_style: session
-  command: tcli_tail
-  contexts:
-    tail:
-      test: delete
-      watch: delete
-  handler: test
-  help: delete a test on the tails
-  name: test-watch-delete
-  topic: testing
-  usage: tail test delete num 42
----
-Agent::TCLI::Command:
-  name: set
-  call_style: session
-  command: tcli_tail
-  contexts:
-    tail: set
-  handler: settings
-  help: adjust default settings
-  parameters:
-    ordered:
-    interval:
-    line_max_cache:
-    line_hold_time:
-    test_max_lines:
-    test_match_times:
-    test_ttl:
-    test_verbose:
-  topic: testing
-  usage: tail set test_max_lines 5
----
-Agent::TCLI::Command:
-  name: show
-  call_style: session
-  command: tcli_tail
-  contexts:
-    tail: show
-  handler: show
-  help: show tail default settings and state
-  parameters:
-    ordered:
-    interval:
-    line_max_cache:
-    line_hold_time:
-    test_max_lines:
-    test_match_times:
-    test_ttl:
-    test_verbose:
-    test_queue:
-    line_cache:
-    active:
-  topic: testing
-  usage: tail show settings
----
-Agent::TCLI::Command:
-  call_style: session
-  command: tcli_tail
-  contexts:
-    tail: log
-  handler: log
-  help: show tail settings
-  name: log
-  topic: testing
-  usage: tail show settings
----
-Agent::TCLI::Command:
-  call_style: session
-  command: tcli_tail
-  contexts:
-    tail: clear
-  handler: establish_context
-  help: clears out a cache
-  name: clear
-  topic: testing
-  usage: tail clear lines
----
-Agent::TCLI::Command:
-  call_style: session
-  command: tcli_tail
-  contexts:
-    tail:
-      clear: lines
-  handler: clear
-  help: clears out the line cache
-  name: clear_lines
-  topic: testing
-  usage: tail clear lines
-...
-
-}
-
-=head3 Append
-
-This POE Event handler receives the tail events from POE::Wheel::FollowTail and
-inserts the line objects into the line_cache.
+This POE Event handler receives the tail events and creates the
+line objects to insert into the line_cache.  It typically
+accepts events from POE::Wheel::FollowTail. It may also be
+called directly from another POE Session, in which case only
+the input to be logged should be provided. It will insert the
+sending POE Session as the line->source if no wheel_id is provided.
 
 =cut
 
 sub Append {
-    my ($kernel,   $self, $input, $wheel_id) =
-      @_[KERNEL,  OBJECT,   ARG0,      ARG1];
+    my ($kernel,   $self, $sender, $input, $wheel_id) =
+      @_[KERNEL,  OBJECT,  SENDER,  ARG0,      ARG1];
 
 	# This and Log are virtually identical. Maybe merge someday?
 
 	return unless defined $input;
-	my $source = $self->GetWheelKey($wheel_id, 'source');
+
+	# assign source to either a wheel or another POE session
+	my $source = defined($wheel_id)
+		? $self->GetWheelKey($wheel_id, 'source')
+		: $sender ;
 
 	$self->Verbose("append: input(".$input.") from ".$source, 2 );
 
@@ -709,7 +297,6 @@ sub Append {
 	$type = "line" if ($type  eq '');
 
 	# push line onto cache
-#	push( @{$self->line_cache}, Agent::TCLI::Package::Tail::Line->new(
 	$self->push_line_cache( Agent::TCLI::Package::Tail::Line->new(
 		'input'			=>	$input,
 		'count'			=>  $line_count[$$self],
@@ -726,11 +313,14 @@ sub Append {
 		shift ( @{$self->line_cache} );
 	}
 
-	# post new event to SimpleLog
-	$kernel->post( 'SimpleLog' => 'LOG' => 'Append', $self->line_count );
+	# post new event to active states
+	foreach my $state ( sort keys %{$self->active} )
+	{
+		$kernel->yield( $state => 'Append', $self->line_count );
+	}
 }
 
-=head3 Activate
+=item Activate
 
 This POE event handler activates tests in the queue by registering an
 event with SimpleLog and creating an event handler.
@@ -760,29 +350,7 @@ sub Activate {
 
 	$self->increment_activated_count;
 
-	# TODO need to keep count of active states and activate everything
-	# immediately until counter is reached. then churn until things clear.
-
-	# This worked OK when POE didn't start until all the tests were queued.
-	# Now we got a problem.....
-	# Hmmm. If local, transport_test will send us a shutdown.
-	# and if remote, we probably should keep waiting for more things to tail...
-	# This is deprecated!
-
-	# If the last test, schedule a shutdown after it should have completed
-	# using max of the last test TTL and the default TTL.
-	# TODO BUG this could cut off earlier tests with long TTLs.
-#	if ( $counter >= $self->depth_test_queue )
-#	{
-#		my $delay = ( $self->test_ttl > ( $test->ttl - time() ) )
-#			? $self->test_ttl : ( $test->ttl - time() );
-#		$kernel->delay('_shutdown', $delay );
-#		$self->Verbose('Activate _shutdown delay('.$delay.')  ');
-#	}
-#	else
-#	{
-		$kernel->delay('Activate',$self->interval );
-#	}
+	$kernel->delay('Activate',$self->interval );
 
 	my $num = $test->num;
 
@@ -801,24 +369,13 @@ sub Activate {
 	$kernel->state( $num => $self => $test->handler );
 	$self->Verbose('Activate: state('.$num.') handler('.$test->handler.')',1);
 
-	# Register test with SimpleLog if required. Posting was too slow.
-	if ( $test->handler eq 'Check'  )
-	{
-		$kernel->call('SimpleLog' => 'REGISTER' =>
-			LOGNAME => $test->log_name,
-			SESSION => $_[SESSION],
-			EVENT 	=> $num,
-		);
-	}
-	# Post to state to do something else
-#	else
-#	{
-		$kernel->yield( $num );
-#	}
+	# kick off state to process cache
+	$kernel->yield( $num );
+
 	return('activated '.$num );
 }
 
-=head3 Check
+=item Check
 
 The POE event handler is what does the actual test/watch on the line
 objects.
@@ -831,6 +388,8 @@ sub Check {
 
     # Note the right now we're ignoring the ARGS which has the
     # Line number, since we keep track of that in each test.
+    # The line number is not supplied if we're processing the cache
+    # This might be used for optimization in the future
 
 	$self->Verbose('Check: state('.$state.') lines('.$self->depth_line_cache.
 		') completed('.$self->tests_complete.') ',1);
@@ -968,13 +527,7 @@ sub Check {
 	# if we're done, clean up
 	if ( $test->complete )
 	{
-		# remove the log subscription
-		$kernel->post('SimpleLog' => 'UNREGISTER' =>
-			LOGNAME => $test->log_name,
-			SESSION => $_[SESSION],
-			EVENT 	=> $state
-			);
-
+		# remove the test from active list
 		delete($self->active->{$test->num});
 
 		# remove the session state
@@ -983,7 +536,7 @@ sub Check {
 	}
 }
 
-=head3 Complete
+=item Complete
 
 This POE event handler handles the response when a test/watch
 is complete.
@@ -1026,15 +579,13 @@ sub Complete {
 
 	$request->Respond( $kernel, $txt , $code );
 
-	$kernel->post( 'SimpleLog' => 'LOG' => 'Completed', $state);
-
 	delete( $self->active->{$test->num} );
 
 	$self->Verbose("Complete test '".$test->name."' (".$test->num.") code($code)",1);
 	return(1);
 }
 
-=head3 FileReset
+=item FileReset
 
 This POE event handler should do something when a tailed file is reset, but
 it doesn't. Ideas are welcome.
@@ -1045,7 +596,7 @@ sub FileReset {
 	#TODO File Reset handler.
 }
 
-=head3 Log
+=item Log
 
 This POE event handler is used to introduce line objects from sources other than
 the POE::Wheel::FollowTail.
@@ -1063,40 +614,45 @@ sub Log {
 
 	my $request = $test->request;
 
-	$line_count[$$self]++;
-
-	my $input = $request->input;
-	my $type = ref($input);
-	if ($type  eq '')
-	{
-		# if we're plain text then join args for input because real input has
-		# 'log' at the beginning.
-		$type = "line";
-		$input = join(' ', @{$request->args});
-	}
-
-	# push line onto cache
-	push( @{$line_cache[$$self]}, Agent::TCLI::Package::Tail::Line->new(
-		'input'			=>	$input,
-		'count'			=>  $line_count[$$self],
-		'birth_time'	=>  time(),
-		'ttl'			=>  time() + $self->line_hold_time,
-		'source'		=>	'*log*',
-		'type'			=>	$type,
-	 ));
-
-	# remove first-in line if total line count exceeded.
-	if ( $self->depth_line_cache > $self->line_max_cache )
-	{
-		$self->Verbose('Too many lines, removing...');
-		shift ( @{$self->line_cache} );
-	}
-
+	# deprecate this?
 	# set test last_line for Check
 	$test->last_line($line_count[$$self]);
 
-	# post new event to SimpleLog
-	$kernel->post( 'SimpleLog' => 'LOG' => 'Append', $self->line_count );
+	$kernel->call( $self->name, 'Append', $test->request->input );
+
+#	$line_count[$$self]++;
+#
+#	my $input = $request->input;
+#	my $type = ref($input);
+#	if ($type  eq '')
+#	{
+#		# if we're plain text then join args for input because real input has
+#		# 'log' at the beginning.
+#		$type = "line";
+#		$input = join(' ', @{$request->args});
+#	}
+#
+#	# push line onto cache
+#	push( @{$line_cache[$$self]}, Agent::TCLI::Package::Tail::Line->new(
+#		'input'			=>	$input,
+#		'count'			=>  $line_count[$$self],
+#		'birth_time'	=>  time(),
+#		'ttl'			=>  time() + $self->line_hold_time,
+#		'source'		=>	'*log*',
+#		'type'			=>	$type,
+#	 ));
+#
+#	# remove first-in line if total line count exceeded.
+#	if ( $self->depth_line_cache > $self->line_max_cache )
+#	{
+#		$self->Verbose('Too many lines, removing...');
+#		shift ( @{$self->line_cache} );
+#	}
+#
+#	foreach my $state ( sort keys %{$self->active} )
+#	{
+#		$kernel->yield( $state => 'Append', $self->line_count );
+#	}
 
 	$kernel->yield('Complete' =>  $state => 'ok' );
 
@@ -1106,7 +662,7 @@ sub Log {
 	$kernel->state( $state );
 }
 
-=head3 PruneLineCache
+=item PruneLineCache
 
 This POE event handler periodically runs to check for lines that have been in
 the cache too long and removes them.
@@ -1143,11 +699,9 @@ sub PruneLineCache {
 	$kernel->delay('PruneLineCache',10)
 		unless ( $self->tests_complete >= $self->depth_test_queue );
 
-	# post new event to SimpleLog
-#	$kernel->post( 'SimpleLog' => 'LOG' => 'Append', 'Pruning' );
 }
 
-=head3 SetFollowTailWheel
+=item SetFollowTailWheel
 
 This POE event handler sets up the POE::Wheel::FollowTail to send
 events to our Append handler for each new File. I suppose at some point
@@ -1196,7 +750,7 @@ sub SetFollowTailWheel {
 	return (1);
 }
 
-=head3 Wally
+=item Wally
 
 This POE event handler doesn't do anything, because sometimes
 we must have a state that doesn't respond to work requests.
@@ -1211,7 +765,7 @@ sub Wally {
 	# This way we KNOW it won't get done.
 }
 
-=head3 test
+=item test
 
 This POE event handler executes the test/watch commands. It is called by the
 Control and takes a Request as an argument.
@@ -1423,7 +977,7 @@ sub test {
 	return (1);
 }
 
-=head3 clear
+=item clear
 
 This POE event handler executes the clear command. It is called by the
 Control and takes a Request as an argument.
@@ -1454,7 +1008,7 @@ sub clear {
 	$request->Respond($kernel, $txt, 200);
 }
 
-=head3 file
+=item file
 
 This POE event handler executes the file commands. It is called by the
 Control and takes a Request as an argument.
@@ -1521,6 +1075,12 @@ sub file {
 	return (1);
 }
 
+=item settings
+
+This POE event handler executes the set commands.
+
+=cut
+
 sub settings {  # Can't call it set
     my ($kernel,  $self, $sender, $request, ) =
       @_[KERNEL, OBJECT,  SENDER,     ARG0, ];
@@ -1575,58 +1135,16 @@ sub settings {  # Can't call it set
 	}
 }
 
-=head3 show
+=item show
 
 This POE event handler executes the show commands. It is called by the
 Control and takes a Request as an argument.
 
 =cut
 #
-#sub show {
-#    my ($kernel,  $self, $sender, $request, ) =
-#      @_[KERNEL, OBJECT,  SENDER,     ARG0, ];
-#	$self->Verbose("show: request ".$request->id );
-#
-#	my ($txt, $subtxt, $what);
-#	if ( $request->command->[0] ne 'show'  )  # tail show settings
-#	{
-#		$what = $request->command->[0];
-#	}
-#	elsif ( $request->command->[0] eq 'show'  # tail settings show??? Not enabled
-#		&&  $request->command->[1] ne 'tail' )
-#	{
-#		$what = $request->command->[1];
-#	}
-#	elsif ( $request->command->[0] eq 'show' ) 	# tail show attacks???
-#												# tail attacks show <attack> ???
-#	{
-#		$what = $request->args->[0];
-#	}
-#
-#	if ( $what eq 'defaults' || $what eq 'settings' )
-#	{
-#		$txt .= "Current default settings: \n";
-#		$txt .= $self->ShowCmdArgs( 'values' =>
-#			"ordered",
-#			"interval",
-#			"line_max_cache",
-#			"line_hold_time",
-#			"test_max_lines",
-#			"test_match_times",
-#			"test_ttl",
-#			"test_verbose",
-#		);
-#	}
-#
-#  	if (!defined($txt) || $txt eq '' )
-#  	{
-#  		$txt = "No entries for ".$what
-#  	}
-#
-#	$request->Respond($kernel, $txt);
-#}
+# Now handled in base class
 
-=head3 log
+=item log
 
 This POE event handler executes the log commands. It is called by the
 Control and takes a Request as an argument.
@@ -1670,7 +1188,418 @@ sub log {
 	return (1);
 }
 
-=head3 _shutdown
+sub _preinit :Preinit {
+	my ($self,$args) = @_;
+
+	$args->{'name'} = 'tcli_tail';
+
+  	$args->{'session'} = POE::Session->create(
+      object_states => [
+          $self => [qw(
+          	_start
+          	_stop
+          	_shutdown
+          	_default
+          	_child
+
+			clear
+			establish_context
+			file
+			log
+			show
+			test
+			settings
+
+			Activate
+			Append
+			Check
+			Complete
+			FileReset
+			PruneLineCache
+			SetFollowTailWheel
+			Wally
+
+			)],
+      ],
+  	);
+}
+
+sub _init :Init {
+	my $self = shift;
+
+	$self->LoadYaml(<<'...');
+---
+Agent::TCLI::Parameter:
+  name: file
+  help: The full Unix path of the file name.
+  manual: >
+    The full Unix path of the file that will be tailed.
+  type: Param
+---
+Agent::TCLI::Parameter:
+  name: filter
+  help: Optional POE::Filter.
+  manual: >
+    A POE::Filter that will be applied by POE::Wheel::FollowTail on the file
+    being tailed.
+  type: Param
+---
+Agent::TCLI::Parameter:
+  name: interval
+  help: Seconds to wait between checks.
+  manual: >
+    Seconds to wait between checks.
+  type: Param
+---
+Agent::TCLI::Parameter:
+  name: seek
+  help: Seek forward byte count.
+  manual: >
+    The Seek parameter tells Tail how far from the start of the file to start
+    reading. Its value is specified in bytes, and values greater than the
+    file's current size will quietly cause Tail to start from the file's end.
+    A Seek parameter of 0 starts FollowTail at the beginning of the file.
+    A negative Seek parameter emulates SeekBack: it seeks backwards from
+    the end of the file.
+    Seek and SeekBack are mutually exclusive. If Seek and SeekBack are not
+    specified, Tail seeks 4096 bytes back from the end of the file
+    and discards everything until the end of the file. This helps ensure
+    that Tail returns only complete records.
+  type: Param
+---
+Agent::TCLI::Parameter:
+  name: seekback
+  help: Seek backwards byte count.
+  manual: >
+    The SeekBack parameter tells Tail how far back from the end of the file
+    to start reading. Its value is specified in bytes, and values greater
+    than the file's current size will quietly cause Tail to start from
+    the file's beginning.
+    A SeekBack parameter of 0 starts Tail at the end of the file.
+    It's recommended to omit Seek and SeekBack to start from the end of a file.
+    A negative SeekBack parameter emulates Seek: it seeks forwards from
+    the start of the file.
+  type: Param
+---
+Agent::TCLI::Parameter:
+  name: name
+  help: The name of the test.
+  manual: >
+    The name is purely cosmetic and will be returned with the test results
+    simliarly to the way Test::Simple operates. This might be useful
+    when reporting results to a group chat or log.
+  type: Param
+---
+Agent::TCLI::Parameter:
+  name: like
+  help: A regex to match.
+  manual: >
+    Like sets a regular expression for the test to match within a line.
+    The regex should be either a string
+  type: Param
+---
+Agent::TCLI::Parameter:
+  name: line_max_cache
+  alaises: max_cache
+  constraints:
+    - UINT
+  help: The maximum number of lines to keep in the line_cache.
+  manual: >
+    The line_max_cache parameter sets how many lines to keep in the line cache.
+    Since actions are asynchronous, it is a good idea to have at least some
+    line cache so that a tail test will work when the action to generate the
+    log ocurred before the test was in place.
+  type: Param
+---
+Agent::TCLI::Parameter:
+  name: line_hold_time
+  alaises: hold_time
+  constraints:
+    - UINT
+  help: The time, in seconds, to keep lines in the cache.
+  manual: >
+    The line_hold_time parameter sets how many seconds to keep lines in
+    the line_cache. This is not an exact amount but rather the minimum,
+    The purge_line_cache process does not run every second, but lines that
+    exceeed the hold_time will be purged when it does run.
+  type: Param
+---
+Agent::TCLI::Parameter:
+  name: test_max_lines
+  alaises: max_lines
+  help: The maximum number of lines to check before failing.
+  manual: >
+    The max_lines parameter sets how many lines to check before giving up
+    and failing. For tests, the default is ten, which is the default size
+    of the line cache. This means that by default, a test will only check the
+    most recent lines of what is being tailed.
+    For watches, the default is zero, which means it does not ever give up.
+  type: Param
+---
+Agent::TCLI::Parameter:
+  name: test_match_times
+  aliases: match_times
+  help: The numer of times the a match must be found.
+  manual: >
+    The match_times parameter sets how many times a line must match
+    in order to pass. For tests, the default is one. For watches, the default is
+    zero, which means it ignores match_times and stays active.
+  type: Param
+---
+Agent::TCLI::Parameter:
+  name: test_ttl
+  aliases: ttl
+  help: The time-to-live in seconds.
+  manual: >
+    The ttl parameter sets how many seconds to wait before giving up
+    and failing. For tests, the default is 30. For watches, the default is
+    zero, which means it does not ever expire.
+  type: Param
+---
+Agent::TCLI::Parameter:
+  name: ordered
+  help: Set the order for processing tests.
+  manual: >
+    Ordered is a boolean switch indicating how to process the tests. If set
+    a test will not be checked against a line until the previous test has
+    passed. If ordered is off then multiple tests are running, and tests
+    are always processed in the order that they were created. The default
+    ordered setting is off for both tests and watches.
+  type: Switch
+---
+Agent::TCLI::Parameter:
+  name: feedback
+  help: Sets the feedback level for what is seen.
+  manual: >
+    Feedback sets the level of additional information about the line that is
+    returned. Currently it is either zero, which is nothing,
+    or one, which returns the whole line. Feedback occurs when a line is
+    matched or if a test is set for verbose. Feedback is set per test, so
+    if multiple tests are active and verbose is one, there is the possibility
+    of seeing the same line more than once. This is useful for debugging
+    a particular test/watch.
+  type: Switch
+---
+Agent::TCLI::Parameter:
+  name: test_verbose
+  aliases: verbose|v
+  help: Sets the verbosity level for a test.
+  manual: >
+    Verbose sets the level of additional information about the test that is
+    returned. Currently it is either zero, which is nothing,
+    or one, which enables feedback (if set) on every line that is seen.
+  type: Switch
+---
+Agent::TCLI::Parameter:
+  name: cache
+  help: Determines whether the line cache is used.
+  manual: >
+    The line cache will hold the most recent lines seen. This option determines
+    whether to use the line cache or only examine new lines when a test is set.
+    The default for tests is on, and for watches is off. To turn off use
+    no-cache as a test/watch option.
+  type: Switch
+---
+Agent::TCLI::Parameter:
+  name: line_cache
+  help: The lines in the cache currently.
+  manual: >
+    The line cache will hold the most recent lines seen. This will show the
+    contents of the line cache.
+  type: Switch
+---
+Agent::TCLI::Parameter:
+  name: test_queue
+  help: The tests and watches that have been requested.
+  manual: >
+    The test_queue holds all the tests that have been requested.
+    This could be a very long list.
+  type: Switch
+---
+Agent::TCLI::Parameter:
+  name: active
+  help: The tests and watches that are currently active.
+  type: Switch
+---
+Agent::TCLI::Command:
+  name: tail
+  call_style: session
+  command: tcli_tail
+  contexts:
+    ROOT: tail
+  handler: establish_context
+  help: tail a file
+  topic: testing
+  usage: tail file add file /var/log/messages
+---
+Agent::TCLI::Command:
+  name: file
+  call_style: session
+  command: tcli_tail
+  contexts:
+    tail: file
+  handler: establish_context
+  help: manipulate files for tailing
+  topic: testing
+  usage: tail file add file /var/log/messages
+---
+Agent::TCLI::Command:
+  name: file-add
+  call_style: session
+  command: tcli_tail
+  contexts:
+    tail:
+      file: add
+  handler: file
+  help: designate a file for tailing
+  topic: testing
+  usage: tail file add file /var/log/messages
+---
+Agent::TCLI::Command:
+  name: file-delete
+  call_style: session
+  command: tcli_tail
+  contexts:
+    tail:
+      file: delete
+  handler: file
+  help: delete a tailing of a file
+  topic: testing
+  usage: tail file delete file /var/log/messages
+---
+Agent::TCLI::Command:
+  name: test
+  call_style: session
+  command: tcli_tail
+  contexts:
+    tail:
+      - test
+      - watch
+  handler: establish_context
+  help: manipulate tests on tails
+  topic: testing
+  usage: tail test add like qr(alert)
+---
+Agent::TCLI::Command:
+  name: test-watch-add
+  call_style: session
+  command: tcli_tail
+  contexts:
+    tail:
+      test: add
+      watch: add
+  handler: test
+  help: add a new tests on the tails
+  parameters:
+    feedback:
+    test_match_times:
+    test_max_lines:
+    name:
+    ordered:
+    test_ttl:
+    test_verbose:
+  topic: testing
+  usage: tail test add like qr(alert) <options>
+---
+Agent::TCLI::Command:
+  call_style: session
+  command: tcli_tail
+  contexts:
+    tail:
+      test: delete
+      watch: delete
+  handler: test
+  help: delete a test on the tails
+  name: test-watch-delete
+  topic: testing
+  usage: tail test delete num 42
+---
+Agent::TCLI::Command:
+  name: set
+  call_style: session
+  command: tcli_tail
+  contexts:
+    tail: set
+  handler: settings
+  help: adjust default settings
+  parameters:
+    ordered:
+    interval:
+    line_max_cache:
+    line_hold_time:
+    test_max_lines:
+    test_match_times:
+    test_ttl:
+    test_verbose:
+  topic: testing
+  usage: tail set test_max_lines 5
+---
+Agent::TCLI::Command:
+  name: show
+  call_style: session
+  command: tcli_tail
+  contexts:
+    tail: show
+  handler: show
+  help: show tail default settings and state
+  parameters:
+    ordered:
+    interval:
+    line_max_cache:
+    line_hold_time:
+    test_max_lines:
+    test_match_times:
+    test_ttl:
+    test_verbose:
+    test_queue:
+    line_cache:
+    active:
+  topic: testing
+  usage: tail show settings
+---
+Agent::TCLI::Command:
+  name: log
+  call_style: session
+  command: tcli_tail
+  contexts:
+    tail: log
+  handler: log
+  help: add text to the line queue
+  manual: >
+    The log command allows one to add a line of text to the queue. It helped
+    to facilitate testing of the tail package, but might not be useful
+    otherwise. Still, here it is. Any text following log appears in the line
+    queue as if it was coming from a tailed file.
+  topic: testing
+  usage: tail log "some text"
+---
+Agent::TCLI::Command:
+  call_style: session
+  command: tcli_tail
+  contexts:
+    tail: clear
+  handler: establish_context
+  help: clears out a cache
+  name: clear
+  topic: testing
+  usage: tail clear lines
+---
+Agent::TCLI::Command:
+  call_style: session
+  command: tcli_tail
+  contexts:
+    tail:
+      clear: lines
+  handler: clear
+  help: clears out the line cache
+  name: clear_lines
+  topic: testing
+  usage: tail clear lines
+...
+
+}
+
+=item _shutdown
 
 This POE event handler is used to initiate a shutdown of the Package.
 
@@ -1681,12 +1610,10 @@ sub _shutdown :Cumulative {
       @_[KERNEL, OBJECT,];
 	$self->Verbose("_shutdown:tail ".$self->name." shutting down");
 
-	$kernel->post( 'SimpleLog' => 'SHUTDOWN' );
-
     return;
 }
 
-=head3 _start
+=item _start
 
 This POE event handler is called when POE starts up a Package.
 The B<_start> method is :Cumulative within OIO.
@@ -1711,31 +1638,19 @@ sub _start {
 	$kernel->delay('PruneLineCache',10);
 	$kernel->delay('Activate', $self->interval , 0 );
 
-	# avoids announcement that no one is watching Completed
-	# but doesn't turn off warings completely
-	# When SimpleLog is in debug mode.
-	$kernel->post('SimpleLog' => 'REGISTER' =>
-		LOGNAME => 'Completed',
-		SESSION => $_[SESSION],
-		EVENT 	=> 'Wally')
-	if (POE::Component::SimpleLog::DEBUG);
-
-	# Hmmm, what's going to keep this open if not debugging?
-	POE::Component::SimpleLog->new(
-		'ALIAS'		=>	'SimpleLog',
-	);
-
 	return("_start ".$self->name);
 }
 
 1;
 #__END__
 
+=back
+
 =head3 INHERITED METHODS
 
-This module is an Object::InsideOut object that inherits from Agent::TCLI::Package::Base. It
-inherits methods from both. Please refer to their documentation for more
-details.
+This module is an Object::InsideOut object that inherits from
+Agent::TCLI::Package::Base. It inherits methods from both.
+Please refer to their documentation for more details.
 
 =head1 AUTHOR
 
@@ -1743,8 +1658,8 @@ Eric Hacker	 E<lt>hacker at cpan.orgE<gt>
 
 =head1 BUGS
 
-There is no separation between users running tests, which means it
-could be very ugly to have multiple users try to run tests on one TCLI bot.
+Currently there is no separation between users running tests, which means it
+could be very ugly to have multiple users try to run tests on one TCLI Agent.
 
 Test scripts not thorough enough.
 

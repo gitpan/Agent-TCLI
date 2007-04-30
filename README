@@ -1,7 +1,7 @@
-VetNetSec version 0.0.0
+TCLI Core version 0.03
 
-This suite allows one to run tests for Network Security device functionality.
-
+This suite allows one to write Agents and create test scripts that direct
+the agents interactively.
 
 INSTALLATION
 
@@ -12,7 +12,8 @@ To install with Module::Build, one can use the following commands:
     ./Build test
     ./Build install
 
-Alternatively, one may load from CPAN, or hopefully a PPM repository.
+Alternatively, one may load from CPAN, or hopefully a PPM repository on Windows
+machines.
 
 DEPENDENCIES
 
@@ -29,25 +30,22 @@ DEPENDENCIES
 		'Test::Simple'              => '0.62',
 		'YAML::Syck'				=> '0'
 
-There are a few buggy perl modules that have fixed versions shipped with
-this collection. No response from the authors to queries has been received.
-	Net::XMPP::Protocol -> Changed, fixed verson on on CPAN and required.
-	POE::Componenent::SimpleLog -> has a bug which would seriously impact performance
-
 USING
 
-Passive Bots:
-One creates a script, see ex/eliza.pl or ex/attack.pl, that loads up a TCLI
+Passive Agents:
+One creates a script, see tail_agent.pl, that loads up a TCLI
 transport with users, packages and other pertinent information.
-The bot will log in, join chatrooms if in the user list,
+The Agent will log in, join chatrooms if in the user list,
 and wait for further commands from authorized users or in a chatroom.
 
 Test script:
-A test script is written, see ex/target.pl, that loads up a Test Transport,
+A test script is written, Agent::TCLI::Testee, that loads up a Test Transport,
 other necessary transports, necessary local packages, and testees.
 
-Using testees, one creates tests ala Test::More with the is_code or like_body
-tests. These may run asynchronously after the testing starts.
+Using testees, one creates tests ala Test::More with Agent controlling
+versions of ok, is_ , and like_ tests.
+These will run asynchronously after the testing starts. One must be conscious
+of the asynchronous nature of the test flow.
 
 It is necessary to call the test_master->run at the end of the test to ensure
 that all tests have completed.

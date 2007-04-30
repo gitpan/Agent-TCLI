@@ -1,6 +1,6 @@
 package Agent::TCLI::Command;
 #
-# $Id: Command.pm 171 2007-03-23 22:52:02Z hacker $
+# $Id: Command.pm 57 2007-04-30 11:07:22Z hacker $
 #
 =head1 NAME
 
@@ -116,7 +116,7 @@ to load or define Parameters before Commands that use them.
 use warnings;
 use strict;
 
-our $VERSION = '0.0.'.sprintf "%04d", (qw($Id: Command.pm 171 2007-03-23 22:52:02Z hacker $))[2];
+our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Command.pm 57 2007-04-30 11:07:22Z hacker $))[2];
 
 use Object::InsideOut qw(Agent::TCLI::Base);
 use Getopt::Lucid qw(:all);
@@ -127,7 +127,9 @@ use FormValidator::Simple;
 The following attributes are accessible through standard named accessor/mutator
 methods unless otherwise noted
 
-=head3 name
+=over
+
+=item name
 
 The name of the command. This is the word that is used to call the command.
 It should be long enough to be descriptive. Use aliases for shortenned
@@ -141,7 +143,7 @@ B<set_name> will only accept SCALAR type values.
 =cut
 my @name		:Field	:All('name');
 
-=head3 topic
+=item topic
 
 The general topic heading that the command will be listed under.
 Most applicable to help menus.
@@ -150,7 +152,7 @@ B<set_topic> will only accept SCALAR type values.
 =cut
 my @topic		:Field	:All('topic');
 
-=head3 help
+=item help
 
 Brief text to decribe the function of the command. This should be
 a one line description.
@@ -159,7 +161,7 @@ B<set_help> will only accept SCALAR type values.
 =cut
 my @help		:Field	:All('help');
 
-=head3 usage
+=item usage
 
 Brief illustration of usage. Complex commands may want to show how to call
 help / manual instead.
@@ -168,7 +170,7 @@ B<set_usage> will only accept SCALAR type values.
 =cut
 my @usage		:Field	:All('usage');
 
-=head3 manual
+=item manual
 
 A long desciption of the command and its use. This text will be followed
 by the command's parameter's manul sections if provided.
@@ -179,7 +181,7 @@ my @manual			:Field
 #					:Type('scalar')
 					:All('manual');
 
-=head3 command
+=item command
 
 A reference to the sub routine that will execute the command
 or the name of the package session that will run the command.
@@ -187,7 +189,7 @@ or the name of the package session that will run the command.
 =cut
 my @command		:Field	:All('command');
 
-=head3 start
+=item start
 
 Deprecated: A reference to a subroutine that is necessary to intialize the command at control startup.
 B<start> will only accept CODE type values.
@@ -195,7 +197,7 @@ B<start> will only accept CODE type values.
 =cut
 my @start		:Field	:All('start')
 				:Type('CODE');
-=head3 stop
+=item stop
 
 Deprecated: A code reference for shutting down anything as the control shuts down.
 B<stop> will only accept CODE type values.
@@ -203,7 +205,7 @@ B<stop> will only accept CODE type values.
 =cut
 my @stop		:Field	:All('stop')
 				:Type('CODE');
-=head3 handler
+=item handler
 
 A code reference for a response handler if necessary for a
 POE event driven command
@@ -211,7 +213,7 @@ POE event driven command
 =cut
 my @handler		:Field	:All('handler');
 
-=head3 call_style
+=item call_style
 
 This is a holdover to facilitate migration from the older style method
 of calling commands with an oob, to the new POE parameter use. The value
@@ -222,7 +224,7 @@ B<call_style> will only accept SCALAR type values.
 =cut
 my @call_style	:Field	:All('call_style');
 
-=head3 contexts
+=item contexts
 
 A hash of the contexts that the command may be called from. This needs to
 be written up much better in a separate section, as it is very complicated.
@@ -233,7 +235,7 @@ my @contexts	:Field
 				:All('contexts')
 				:Type('Hash');
 
-=head3 parameters
+=item parameters
 
 A hash of parameter objects that the command accepts.
 B<parameters> will only contain hash values.
@@ -244,7 +246,7 @@ my @parameters		:Field
 					:Arg('name'=>'parameters', 'default'=> { } )
 					:Acc('parameters');
 
-=head3 required
+=item required
 
 A hash containing the names of the required parameters.
 B<required> will only contain HASH values.
@@ -255,22 +257,40 @@ my @required		:Field
 					:Arg('name'=>'required', 'default'=> { } )
 					:Acc('required');
 
+=item cl_options
 
-# RemindHacker: I wrote a Eclipse Perl template ioxattr for new attributes.
+These are command line options that will be issued every time the
+command is called. They will begin the value returned by
+BuildCommandLine. Make sure that they are not available as
+parameters for this command. There is no checking for
+duplicates and that will likely cause errors.
+B<cl_options> should only contain scalar values.
+
+=cut
+my @cl_options		:Field
+#					:Type('scalar')
+					:All('cl_options');
 
 # Standard class utils are inherited
 
-=head2 Usages (  context  )
+=back
 
-Get a list of how this coommand is called in the given context.
+=head2 METHODS
 
-=head3 Description
+These methods assist Package authors in common functioanlity needed to support
+a command. In some cases they are used internally by other parts of the
+Agent::TCLI system.
 
-A command may be aliased to several different terms in a given context or it may be aliased to different terms in different contexts. This method takes a context and returns the list of aliases for the command. It is used internally to support help.
+=over
 
-=head3  Usage
+=item Usages (  context  )
 
-$cmd->Usages( \@context )
+Get a list of how this command is called in the given context.
+
+A command may be aliased to several different terms in a given context
+or it may be aliased to different terms in different contexts. This
+method takes a context and returns the list of aliases for the command.
+It is used internally to support help.
 
 =cut
 
@@ -357,19 +377,17 @@ sub Usages {
 	return ( \@aliases );
 } # End Usages
 
-=head2 Aliases (  context_hash_key  )
+=item Aliases (  context_hash_key  )
 
 Return aliases for specific context hash key.
 
-=head3 Description
+An internal method that takes a context hash key and returns all the
+aliases for that specific key. The aliases could be an array, hash
+or scalar and this function simplifies that logic. It returns a
+hash keyed on aliases of the command object.
 
-An internal method that takes a context hash key and returns all the aliases for that specific key. The aliases could be an array, hash or scalar and this function simplifies that logic. It returns a hash keyed on aliases of the command object.
-
-If one has only a context, then use Usages which will call Aliases correctly.
-
-=head3  Usage
-
-$self->Aliases( $self->contexts->{'this'}{'that'} )
+If one has only a context, then use Usages which will call
+Aliases correctly.
 
 =cut
 
@@ -401,38 +419,38 @@ sub Aliases {
 	return (\@aliases);
 } # End Aliases
 
-sub RawCommand {
-	my $self = shift;
-#    my %cmd = validate( @_, {
-#        help_text => { type => Params::Validate::SCALAR },  #required
-#        usage     => { type => Params::Validate::SCALAR },  #required
-#        topic     => { optional => 1, type => Params::Validate::SCALAR },
-#        name      => { type => Params::Validate::SCALAR },  #required
-#        command   => { type => ( Params::Validate::SCALAR | Params::Validate::CODEREF ) }, #required
-#        context	  => { optional => 1, type => Params::Validate::ARRAYREF },
-#        style     => { optional => 1, type => Params::Validate::SCALAR },
-#        start     => { optional => 1, type => Params::Validate::CODEREF },
-#        handler   => { optional => 1, type => Params::Validate::SCALAR },
-#        stop      => { optional => 1, type => Params::Validate::CODEREF },
-#    } );
+#sub RawCommand {
+#	my $self = shift;
+##    my %cmd = validate( @_, {
+##        help_text => { type => Params::Validate::SCALAR },  #required
+##        usage     => { type => Params::Validate::SCALAR },  #required
+##        topic     => { optional => 1, type => Params::Validate::SCALAR },
+##        name      => { type => Params::Validate::SCALAR },  #required
+##        command   => { type => ( Params::Validate::SCALAR | Params::Validate::CODEREF ) }, #required
+##        context	  => { optional => 1, type => Params::Validate::ARRAYREF },
+##        style     => { optional => 1, type => Params::Validate::SCALAR },
+##        start     => { optional => 1, type => Params::Validate::CODEREF },
+##        handler   => { optional => 1, type => Params::Validate::SCALAR },
+##        stop      => { optional => 1, type => Params::Validate::CODEREF },
+##    } );
+#
+#	my %cmdhash = (
+#		'name'		=> $name[$$self],
+#        'help'		=> $help[$$self],
+#        'usage'		=> $usage[$$self],
+#        'command' 	=> $command[$$self],
+#	);
+#	$cmdhash{'topic'} 	= $topic[$$self] 	if (defined($topic[$$self]));
+#	$cmdhash{'contexts'}	= $contexts[$$self] if (defined($contexts[$$self]));
+#	$cmdhash{'call_style'}	= $call_style[$$self] if (defined($call_style[$$self]));
+#	$cmdhash{'handler'}	= $handler[$$self] 	if (defined($handler[$$self]));
+#	$cmdhash{'start'}	= $start[$$self] 	if (defined($start[$$self]));
+#	$cmdhash{'stop'}	= $stop[$$self] 	if (defined($stop[$$self]));
+#
+#  	return ( \%cmdhash );
+#}
 
-	my %cmdhash = (
-		'name'		=> $name[$$self],
-        'help'		=> $help[$$self],
-        'usage'		=> $usage[$$self],
-        'command' 	=> $command[$$self],
-	);
-	$cmdhash{'topic'} 	= $topic[$$self] 	if (defined($topic[$$self]));
-	$cmdhash{'contexts'}	= $contexts[$$self] if (defined($contexts[$$self]));
-	$cmdhash{'call_style'}	= $call_style[$$self] if (defined($call_style[$$self]));
-	$cmdhash{'handler'}	= $handler[$$self] 	if (defined($handler[$$self]));
-	$cmdhash{'start'}	= $start[$$self] 	if (defined($start[$$self]));
-	$cmdhash{'stop'}	= $stop[$$self] 	if (defined($stop[$$self]));
-
-  	return ( \%cmdhash );
-}
-
-=head2 GetoptLucid( $kernel, $request)
+=item GetoptLucid( $kernel, $request)
 
 Returns an option hash keyed on parameter after the arguments have bee parsed
 by Getopt::Lucid. Will respond itself if there is an error and return nothing.
@@ -442,25 +460,30 @@ Takes the POE Kernel and the request as args.
 =cut
 
 sub GetoptLucid {
-	my ($self, $kernel, $request) = @_;
+	my ($self, $kernel, $request, $package) = @_;
 
 	my (@options, $func);
 
 	# Creat an array for Getopt::Lucid
 	foreach my $param ( values %{ $self->parameters }  )
 	{
-		my $name = defined($param->aliases)
-			? $param->name.'|'.$param->aliases
-			: $param->name;
-		if ( exists $self->required->{$param->name} )
+#		my $name = defined($param->aliases)
+#			? $param->name.'|'.$param->aliases
+#			: $param->name;
+		my $name = $param->name;
+
+		# don't put as required if default is set.
+		if ( exists $self->required->{$name} &&
+			( defined ($package) &&
+			 not defined( $package->$name ) ) )
 		{
 			no strict 'refs';
-			push(@options, $param->type->($name)->required() );
+			push(@options, $param->type->($param->Alias)->required() );
 		}
 		else
 		{
 			no strict 'refs';
-			push(@options, $param->type->($name) );
+			push(@options, $param->type->($param->Alias) );
 		}
 	}
 
@@ -468,7 +491,7 @@ sub GetoptLucid {
 
 	my $opt;
 
-	$self->Verbose("GetoptLucid: request args",1,$request->args );
+#	$self->Verbose("GetoptLucid: request args",1,$request->args );
 
 	# Parse the args using parameters.
 	eval {$opt = Getopt::Lucid->getopt(
@@ -488,27 +511,28 @@ sub GetoptLucid {
 	return( $opt );
 }
 
+=item Validate( <kernel>, <request>, <package> )
+
+Returns a hash keyed on parameter after the arguments have been parsed
+by Getopt::Lucid and validated by FormValidator::Simple as per the constraints
+specified in the Parameter or Command definitions.
+Will respond itself if there is an error and return nothing.
+
+Takes the POE Kernel, the Request, and the Package as args.
+
+=cut
+
 sub Validate {
 	my ($self, $kernel, $request, $package) = @_;
 
 	# Getopt will send error if problem.
-	return unless (my $opt  = $self->GetoptLucid($kernel, $request) );
+	return unless (my $opt  = $self->GetoptLucid($kernel, $request, $package) );
 
-	my %args = $opt->options;
+#	my %args = $opt->options;
+	my %args = $self->ApplyDefaults($opt, $package, $request->input );
 
-	$self->Verbose("Validate: param",1,\%args);
-	$self->Verbose('Validate: $request->input ',1,$request->input);
-
-	# Hash has empty values for args not supplied. Take them out.
-	foreach my $key ( keys %args)
-	{
-		delete($args{$key}) if (
-			( !$args{$key}  ) &&
-			$request->input !~ qr($key)
-			);
-	}
-
-	$self->Verbose("Validate: param stripped",1,\%args);
+#	$self->Verbose("Validate: param",1,\%args);
+#	$self->Verbose('Validate: $request->input ',1,$request->input);
 
 	# are there any left?
 	if (keys %args == 0 )
@@ -518,11 +542,10 @@ sub Validate {
 		return (0);
 	}
 
-
 	my (@profile, %input, $txt);
 
 	# Creat an array for Form::Validator
-	# and an %input without objects or things that aren't contrained
+	# and an %input without objects or things that aren't constrained
 	foreach my $check ( values %{ $self->parameters }  )
 	{
 		if ( defined($check->constraints ) )
@@ -533,31 +556,23 @@ sub Validate {
 		}
 	}
 
-	$self->Verbose("Validate: profile ",1,\@profile);
+	$self->Verbose("Validate: profile ",2,\@profile);
 
 #	$self->Verbose("Validate: input",1,\%input);
 
 	my $results = FormValidator::Simple->check( \%input => \@profile);
-#	my $results = FormValidator::Simple->check( \%args => \@profile);
 
     if ( $results->has_error ) {
         foreach my $key ( @{ $results->error() } ) {
             foreach my $type ( @{ $results->error($key) } ) {
-                $txt .= "Invalid: $key not a $type \n";
+                $txt .= "Invalid: $key not $type \n";
+                $txt .= "$key: ".$input{$key}." \n";
             }
         }
 		$self->Verbose('Validate: failed ('.$txt.') ');
 		$request->Respond($kernel,$txt, 400);
 		return (0);
     }
-
-	# put in defaults from package if avialable
-	if (defined($package))
-	{
-		%args = $self->ApplyDefaults($opt, $package, $request->input );
-	}
-
-	$self->Verbose("Validate: args with defaults",1,\%args);
 
 	# create class objects if necessary
 	my $param;
@@ -578,7 +593,7 @@ sub Validate {
 			$param->class =~ /::/ )
 		{
 			my $class = $param->class;
-			$self->Verbose("Validate: class($class) attr($attr) args{$attr}=>".$args{$attr});
+			$self->Verbose("Validate: class($class) attr($attr) args{$attr}=>".$args{$attr},2);
 			my $obj;
 			eval {
 				no strict 'refs';
@@ -597,10 +612,17 @@ sub Validate {
 		}
 	}
 
-	$self->Verbose("Validate: returning args",1,\%args);
+	$self->Verbose("Validate: returning args",2,\%args);
 
 	return(\%args);
 }
+
+=item ApplyDefaults( <param_hash>, <package>, <input> )
+
+Returns a hash keyed on parameter after the defaults from the Package
+attributes have been applied. This is used during the Validate method.
+
+=cut
 
 sub ApplyDefaults {
 	my ($self, $opt, $package, $input ) = @_;
@@ -629,13 +651,13 @@ sub ApplyDefaults {
 	# merge with defaults
 	%opt = $opt->replace_defaults( %defaults );
 
-	$self->Verbose("ApplyDefaults: opt before cleansing ",1,\%opt);
+#	$self->Verbose("ApplyDefaults: opt before cleansing ",1,\%opt);
 
 	my $regex;
 	# Hash has empty values for args not supplied. Take them out (again).
 	foreach my $key ( keys %opt )
 	{
-		$regex = $self->parameters->{$key}->alias;
+		$regex = $self->parameters->{$key}->Alias;
 		delete($opt{$key}) if (
 			(not $opt{$key} ) &&        		# the value is blank or zero
 			( $input !~ qr($regex) ||		# it was not in the input
@@ -648,7 +670,41 @@ sub ApplyDefaults {
 	return( %opt );
 }
 
+=item BuildCommandLine( <param_hash>, <with_cmd> )
+
+Returns a hash keyed on parameter after the arguments have been parsed
+by Getopt::Lucid and validated by FormValidator::Simple as per the constraints
+specified in the Parameter or Command definitions.
+Will respond itself if there is an error and return nothing.
+
+Takes the POE Kernel, the Request, and the Package as args.
+
+=cut
+
+sub BuildCommandLine {
+	my ($self, $param_hash, $with_cmd ) = @_;
+
+	my $command_line = $with_cmd ? $self->command." " : '';
+
+	$command_line .= $self->cl_options." " if defined($self->cl_options);
+
+	foreach my $param (sort keys %{$param_hash} )
+	{
+		my $cp = $self->parameters->{$param}->BuildCommandParam($param_hash)
+			if ( defined($self->parameters->{$param} ) );
+		# We'll get a empty string for nothing to set, don't add extra space.
+		$command_line .= $cp." " if ($cp);
+	}
+
+	chop($command_line);
+	$self->Verbose("BuildCommandLine: cl($command_line) ",2);
+	return ($command_line);
+}
+
 1;
+#__END__
+
+=back
 
 =head3 INHERITED METHODS
 
@@ -660,7 +716,7 @@ details.
 
 Eric Hacker	 E<lt>hacker at cpan.orgE<gt>
 
-=head2 BUGS
+=head1 BUGS
 
 When naming commands in the preinit commands hash or loading from loadyaml()
 it is easy to accidentally

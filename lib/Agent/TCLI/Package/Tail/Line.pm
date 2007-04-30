@@ -1,14 +1,15 @@
 package Agent::TCLI::Package::Tail::Line;
 #
-# $Id: Line.pm 42 2007-04-02 20:20:14Z hacker $
+# $Id: Line.pm 50 2007-04-25 10:47:17Z hacker $
 #
 =head1 NAME
 
-Agent::TCLI::Package::Tail::Line - A class for for lines to be tested.
+Agent::TCLI::Package::Tail::Line - A class for tailed lines to be tested.
 
 =head1 SYNOPSIS
 
-An object for storing Agent::TCLI::Test::Line information. Used to facilitate Agent::TCLI::Test::Tail.
+An internal object for storing Agent::TCLI::Test::Line information.
+Used to facilitate Agent::TCLI::Test::Tail.
 
 =cut
 
@@ -17,26 +18,29 @@ use strict;
 
 use Object::InsideOut qw(Agent::TCLI::Base);
 
-our $VERSION = '0.'.sprintf "%04d", (qw($Id: Line.pm 42 2007-04-02 20:20:14Z hacker $))[2];
+our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Line.pm 50 2007-04-25 10:47:17Z hacker $))[2];
 
 =head2 ATTRIBUTES
 
-The following attributes are accessible through standard get_ or set_
+The following attributes are accessible through standard accessor/mutator
 methods unless otherwise noted
 
-= cut
+=over
 
-=head3 input
+=item input
 
-The 'line' as it is input into the cache. This may actually be another object to be tested against.
+The 'line' as it is input into the cache. Traditionally this will be
+the actual text fron the file being tailed. It may optionally be
+another object to be tested against. The POE::Filter being used
+with the Tail determines what the contents of input will be.
 
 =cut
 my @input			:Field
 					:All('input');
 
-=head3 count
+=item count
 
-The relative position within the test run of all lines.
+The relative position within the current run of all lines.
 B<count> will only contain numeric values.
 
 =cut
@@ -44,7 +48,7 @@ my @count			:Field
 					:Type('numeric')
 					:All('count');
 
-=head3 birth_time
+=item birth_time
 
 The birth_time that the line hit the tail system.
 B<birth_time> will only contain Numeric values.
@@ -54,9 +58,10 @@ my @birth_time		:Field
 					:Type('Numeric')
 					:All('birth_time');
 
-=head3 ttl
+=item ttl
 
-Line time to live. Set as a time() value upon creation so this is the actual time the line should expire.
+Line time to live. Set as an offset to time() upon creation so this is
+the actual time the line should expire.
 B<ttl> will only contain Numeric values.
 
 =cut
@@ -64,7 +69,7 @@ my @ttl				:Field
 					:Type('Numeric')
 					:All('ttl');
 
-=head3 source
+=item source
 
 A URI indicating the source of the line. Necessary for monitoring multiple sources.
 
@@ -72,9 +77,10 @@ A URI indicating the source of the line. Necessary for monitoring multiple sourc
 my @source			:Field
 					:All('source');
 
-=head3 type
+=item type
 
-Describes the line type. "line" for plain text lines, ref($input) for objects. Perhaps others in the future.
+Describes the line type. "line" for plain text lines, ref($input) for objects.
+Perhaps others in the future.
 B<type> will only contain scalar values.
 
 =cut
@@ -84,20 +90,24 @@ my @type			:Field
 
 # Standard class utils are inherited
 
+=back
+
 =head2 METHODS
 
-=head2 new ( hash of attributes )
+=over
+
+=item new ( hash of attributes )
 
 See Attributes for their description.
 
 =cut
 
-
-
 1;
 #__END__
 
-=head3 INHERITED METHODS
+=back
+
+=head2 INHERITED METHODS
 
 This module is an Object::InsideOut object that inherits from Agent::TCLI::Base. It
 inherits methods from both. Please refer to their documentation for more
@@ -112,8 +122,6 @@ Eric Hacker	 E<lt>hacker at cpan.orgE<gt>
 SHOULDS and MUSTS are currently not enforced.
 
 Test scripts not thorough enough.
-
-Probably many others.
 
 =head1 LICENSE
 

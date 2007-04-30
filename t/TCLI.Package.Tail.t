@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-# $Id: TCLI.Package.Tail.t 45 2007-04-03 15:51:19Z hacker $
+# $Id: TCLI.Package.Tail.t 49 2007-04-25 10:32:36Z hacker $
 
 use Test::More tests => 264;
 use lib 'blib/lib';
@@ -26,7 +26,7 @@ sub POE::Kernel::TRACE_EVENTS  () { $poe_te }
 sub POE::Component::SimpleLog::DEBUG () { 0 }
 
 use Agent::TCLI::Transport::Test;
-use Agent::TCLI::Transport::Test::Testee;
+use Agent::TCLI::Testee;
 use POE;
 
 use Agent::TCLI::Package::Tail;
@@ -49,7 +49,7 @@ my $test_master = Agent::TCLI::Transport::Test->new({
 
 });
 
-my $t = Agent::TCLI::Transport::Test::Testee->new(
+my $t = Agent::TCLI::Testee->new(
 	'test_master'	=> $test_master,
 	'addressee'		=> 'self',
 );

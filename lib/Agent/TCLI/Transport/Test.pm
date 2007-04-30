@@ -1,4 +1,4 @@
-# $Id: Test.pm 42 2007-04-02 20:20:14Z hacker $
+# $Id: Test.pm 57 2007-04-30 11:07:22Z hacker $
 package Agent::TCLI::Transport::Test;
 
 =pod
@@ -37,7 +37,7 @@ my $test_master = Agent::TCLI::Transport::Test->new({
 # need at least one testee
 
 # Set up the local test
-my $target = Agent::TCLI::Transport::Test::Testee->new(
+my $target = Agent::TCLI::Testee->new(
 	'test_master'	=> $test_master,
 	'addressee'		=> 'self',
 );
@@ -60,11 +60,17 @@ tests need to be in place to ensure those needs are met.
 =head1 GETTING STARTED
 
 If you are unfamiliar with Perl's Test:: modules, then please see
-Test::Tutorial for background information.
+L<Test::Tutorial> for background information.
+
+One may look at some of the test scripts with the TCLI source for examples,
+but they are limited to a single agent.
+The TCLI core does not come with modules that are useful for multi-agent test
+scripts. This is to reduce the dependencies for the Core. Please see example
+scripts provided with other TCLI packages for better multi agent examples.
 
 Currently, Agent::TCLI::Transport::Test offers only an object interface, so we're
 using Test::More to set the plan and import diag() into the test script.
-This will change at some point, but this kludge will always work.
+This might change at some point, but this kludge will always work.
 
 As in the Synopsis, one will most often want to define the necesary packages
 outside of the transport(s) used. Typically one will want the same packages
@@ -82,8 +88,8 @@ for Transport::Test, as it will load a default user. Local tests are
 executed with a Control created for the first user in the stack. Currently,
 running with users other than the default has not been tested.
 
-Then one needs to create at least one Agent::TCLI::Transport::Test::Testee. The testee
-object will be used for the actual tests. See Agent::TCLI::Transport::Test::Testee
+Then one needs to create at least one Agent::TCLI::Testee. The testee
+object will be used for the actual tests. See Agent::TCLI::Testee
 for the tests available.
 
 Within the actual tests, the Agent::TCLI::Transport::Test (as test_master) offers two
@@ -92,13 +98,15 @@ POE completely and finish the tests. B<done> may be used within the script
 to force check for completion of all prior tests. B<done> is a test itself and
 will report a success or failure.
 
-
 =head2 ATTRIBUTES
 
 Unless otherwise indicated, these attrbiute methods are for internal use. They are not
 yet restricted because the author does not beleive his imagination is better
 than the rest of collective world's. If there are use cases for accessing
-the internals, please make the author aware.
+the internals, please make the author aware. In the future, they may be
+restricted to reduce the need for error checking and for security.
+
+=over
 
 =cut
 
@@ -120,7 +128,7 @@ use Test::Builder::Module;
 
 use Object::InsideOut qw( Agent::TCLI::Transport::Base Test::Builder::Module);
 
-our $VERSION = '0.'.sprintf "%04d", (qw($Id: Test.pm 42 2007-04-02 20:20:14Z hacker $))[2];
+our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Test.pm 57 2007-04-30 11:07:22Z hacker $))[2];
 
 #func#our $TCLI_TEST = Agent::TCLI::Transport::Test->new;
 
@@ -131,7 +139,7 @@ our $VERSION = '0.'.sprintf "%04d", (qw($Id: Test.pm 42 2007-04-02 20:20:14Z hac
 #func#		);
 #func#}
 
-=head3 testees
+=item testees
 
 An array of the testees that the test transport will be working with.
 
@@ -141,7 +149,7 @@ my @testees			:Field
 					:All('testees')
 					:Type('Array');
 
-=head3 requests
+=item requests
 
 An internal array acting as a queue of the requests to send. Requests are not
 retained in the queue, but are only held until dispatched.
@@ -151,7 +159,7 @@ my @requests		:Field
 					:All('requests')
 					:Type('Array');
 
-=head3 test_count
+=item test_count
 
 A running count of all the tests. Some requests may contain multiple tests.
 B<test_count> will only contain numeric values.
@@ -161,7 +169,7 @@ my @test_count		:Field
 					:Type('numeric')
 					:All('test_count');
 
-=head3 request_count
+=item request_count
 
 A counter for making request ids
 B<request_count> will only contain numeric values.
@@ -171,7 +179,7 @@ my @request_count	:Field
 					:Type('numeric')
 					:All('request_count');
 
-=head3 default_request
+=item default_request
 
 Normally a Agent::TCLI::Request object must be created for each test. This is the
 default Request to use in making requests for each test. This may be set
@@ -183,7 +191,7 @@ my @default_request	:Field
 					:All('default_request')
 					:Type('Agent::TCLI::Request' );
 
-=head3 requests_sent
+=item requests_sent
 
 Number of requests sent out.
 B<requests_sent> will only accept Numeric type values.
@@ -194,7 +202,7 @@ my @requests_sent	:Field
 					:All('requests_sent')
 					:Type('Numeric');
 
-=head3 requests_complete
+=item requests_complete
 
 Number of requests_completed
 B<requests_complete> will only accept Numeric type values.
@@ -204,7 +212,7 @@ my @requests_complete	:Field
 						:All('requests_complete')
 						:Type('Numeric');
 
-=head3 request_tests
+=item request_tests
 
 A hash keyed by request ID of arrays of tests to perform on the responses
 B<request_tests> will only contain hash values.
@@ -215,7 +223,7 @@ my @request_tests	:Field
 					:Arg('name'=>'request_tests', 'default'=> { } )
 					:Acc('request_tests');
 
-=head3 responses
+=item responses
 
 A hash keyed on request_id to hold responses when multiple responses per request are expected.
 B<responses> will only contain hash values.
@@ -225,7 +233,7 @@ my @responses		:Field
 					:Type('hash')
 					:All('responses');
 
-=head3 responses_max_contiguous
+=item responses_max_contiguous
 
 This field hold a numeric value corellating to the response ID of the
 maximum response received that had at least one response received
@@ -239,7 +247,7 @@ my @responses_max_contiguous	:Field
 					:Acc('responses_max_contiguous');
 
 
-=head3 dispatch_counter
+=item dispatch_counter
 
 A running counter of Dispatch attempts to prevent stalling.
 B<dispatch_counter> will only contain numeric values.
@@ -249,7 +257,7 @@ my @dispatch_counter			:Field
 					:Type('numeric')
 					:All('dispatch_counter');
 
-=head3 dispatch_retries
+=item dispatch_retries
 
 The number of times to retry the dispatching of queued requests. Increments are in 5 second blocks. Default is 6 or 30 seconds. This is a user adjustable setting.
 When the count is reached, the next test is dispatched without regard to the state of the previous test.
@@ -263,7 +271,7 @@ my @dispatch_retries			:Field
 					:Acc('dispatch_retries');
 
 
-=head3 timeout_counter
+=item timeout_counter
 
 A running counter for timing out all requests.
 B<timeout_counter> will only contain numeric values.
@@ -273,7 +281,7 @@ my @timeout_counter			:Field
 					:Type('numeric')
 					:All('timeout_counter');
 
-=head3 timeout_retries
+=item timeout_retries
 
 The number of times to retry the timeout. Increments are in 5 second blocks. Default is 6 or 30 seconds.
 Timeout checks periodically to make sure we're still running requests. It begins the countdown when
@@ -286,7 +294,7 @@ my @timeout_retries	:Field
 					:Arg('name'=>'timeout_retries','default'=>6)
 					:Acc('timeout_retries');
 
-=head3 timeout_id
+=item timeout_id
 
 The id of the timeout event so that it can be rescheduled if necessary.
 
@@ -295,7 +303,7 @@ my @timeout_id		:Field
 #					:Type('type')
 					:All('timeout_id');
 
-=head3 running
+=item running
 
 A flag to indicate if we've started the POE kernel fully, rather than just running slices.
 This is set when B<run> is called.
@@ -307,7 +315,7 @@ my @running			:Field
 					:Arg('name'=>'running','default'=>0)
 					:Acc('running');
 
-=head3 last_testee
+=item last_testee
 
 Internally used when building a new test to check what the last testee was.
 B<last_testee> will only contain scalar values.
@@ -318,7 +326,7 @@ my @last_testee		:Field
 					:Arg('name'=>'last_testee','default'=>'')
 					:Acc('last_testee');
 
-=head3 dispatch_id
+=item dispatch_id
 
 Holds the POE event ID for the Dispatch so it can be rescheduled.
 B<dispatch_id> should only contain scalar values.
@@ -330,6 +338,8 @@ my @dispatch_id			:Field
 
 # Standard class utils are inherited
 
+=back
+
 =head2 METHODS
 
 Most of these methods are for internal use within the TCLI system and may
@@ -337,7 +347,9 @@ be of interest only to developers trying to enhance TCLI.
 
 The first three are the exception.
 
-=head3 done( <timeout>, <name> )
+=over
+
+=item done( <timeout>, <name> )
 
 When B<done> is called, it will attempt to complete all previous requests before
 continuing. If done is provided a name parameter, it will report its
@@ -428,10 +440,11 @@ sub done {
 	return ($ready);
 }
 
-=head3 load_testee
+=item load_testee ( <testee> )
 
 The preferred way to load a testee is to set 'test_master' when the testee is
-created. Testee will then call this function on initializtion.
+created. Testee will then call this function on initializtion. A testee is
+an Agent::TCLI::Testee object.
 
 =cut
 
@@ -444,7 +457,7 @@ sub load_testee {
 	$self->push_testees($testee);
 }
 
-=head3 run
+=item run
 
 B<run> is called at the end of the test script. It will call POE::Kernel->run
 to finish off all of the requests. Other POE event handlers will ensure that all
@@ -456,8 +469,6 @@ Running does not take any parameters and does not return anything.
 
 sub run {
 	my $self = shift;
-#func#	my $self = ( ref $_[0] && (ref $_[0]) =~ /Agent::TCLI::.*TEST/ )
-#func#		? shift : $TCLI_TEST;
 	$self->Verbose($self->alias.":run: running (".$self->depth_requests.") requests " );
 
 	# requests still left in queue (How could there not be?)
@@ -474,7 +485,7 @@ sub run {
 	$poe_kernel->run;
 }
 
-=head3 preinit
+=item preinit
 
 This private Object::InsideOut (OIO) method is used for object initialization.
 
@@ -514,13 +525,13 @@ sub _preinit :PreInit {
 
 }
 
-=head3 spawn
+=item _init
 
 This private OIO method is used for object initialization.
 
 =cut
 
-sub spawn :Init {
+sub _init :Init {
 	my ($self, $args) = @_;
 
 	$self->set(\@default_request, Agent::TCLI::Request->new({
@@ -536,6 +547,9 @@ sub spawn :Init {
 		'do_verbose'		=> $self->do_verbose,
 	})) unless defined( $self->default_request );
 
+	$self->control_options->{'local_address'} = '127.0.0.1'
+		unless defined($self->control_options->{'local_address'});
+
 	# Load up control now, before requests come in, since we must be local
 	# if loading packages.
 	# Get a Control for the test-master user loaded into peers.
@@ -545,7 +559,7 @@ sub spawn :Init {
 	$poe_kernel->run_one_timeslice;
 }
 
-=head3
+=item build_test
 
 This object method is used to build the test, as a Agent::TCLI::Request, and put it
 on the queue. It is called by the Testee. Some of this functionality may be
@@ -614,7 +628,12 @@ sub build_test {
 		$id = $self->make_id( $request_count[$$self] );
 	}
 
-	$name = $input unless defined $name;
+	unless ( defined $name )
+	{
+		$name = ( $test =~ qr(not|error) )
+			? 'failed '.$input
+			: $input;
+	}
 
 	$test_count[$$self]++;
 
@@ -630,7 +649,7 @@ sub build_test {
 	return($request);
 }
 
-=head3 dispatch
+=item dispatch
 
 This internal object method is used to dispatch requests and run POE timeslices
 during the test script. An understanding of POE may be necessary to grok
@@ -668,7 +687,7 @@ sub dispatch {
 	return($post_it);
 }
 
-=head3 do_test
+=item do_test
 
 This is an internal method to process responses.
 B<do_test> actually executes the test and send the output to the TAP processor.
@@ -751,6 +770,29 @@ sub do_test {
 	return ($another, $again);
 }
 
+=item get_param ( <param>, [ <id>, <timeout> ] )
+
+B<get_param> is an internal method that supports the Testee get_param command.
+It requires a param argument that is the parameter to try and obtain a value
+for. It takes an optional request id from a prior request. If not
+supplied, it will use the last request made. It also takes an optional
+timeout value, which will be passed to B<done> to wait for all responses
+to come in.
+B<get_param> attempts to parse the text in the responses to find the value
+for the parameter being requested. It expects that the response is
+formatted appropriately to extract the parameter.
+Valid formats to receive the parameter are:
+	 param=something
+	 param something
+	 param="a quoted string with something"
+	 param "a quoted string with something"
+	 param: a string yaml-ish style, no comments, to the end of the line
+	 param: "a quoted string, just what's in quotes"
+It returns the value of the parameter requested, or undefined if it
+cannot be found.
+
+=cut
+
 sub get_param {
 	my ($self, $param, $id, $timeout) = @_;
 
@@ -802,6 +844,19 @@ sub get_param {
 	return ($value);
 }
 
+=item get_responses ( [ <id>, <timeout> ] )
+
+B<get_responses> is an internal method that supports the Testee get_responses
+command. It takes an optional request id from a prior request. If not
+supplied, it will use the last request made. It also takes an optional
+timeout value, which will be passed to B<done> to wait for all responses
+to come in.
+It returns the text from all available responses, separated by a pair
+of newlines.
+
+=cut
+
+
 sub get_responses {
 	my ($self, $id, $timeout) = @_;
 
@@ -831,7 +886,7 @@ sub get_responses {
 	return ($value);
 }
 
-=head3 make_id
+=item make_id
 
 B<make_id> is used to create a request ID for new requests. It is a separate
 method to ease mainenance in case it needs to change in the future. It
@@ -852,7 +907,7 @@ sub make_id {
 	return ( $id );
 }
 
-=head3 post_it
+=item post_it
 
 This internal method controls whether to dispatch the next test. It supports
 different styles of running tests, though currently the style is not
@@ -920,19 +975,11 @@ sub post_it{
 	return($post_it);
 }
 
-=head2 responses_contiguous (   )
-
-Checks on contiguous responses.
-
-=head3 Description
+=item responses_contiguous (   )
 
 Sets responses_max_contiguous correctly by starting at the last value and
 incrementing until a response has not been recived. Return
 responses_max_contiguous.
-
-=head3  Usage
-
-$self->responses_complete()
 
 =cut
 
@@ -945,9 +992,9 @@ sub responses_contiguous {
 		$responses_max_contiguous[$$self]++;
 	}
 	return ( $self->responses_max_contiguous );
-} # End responses_complete
+} # End responses_contiguous
 
-=head3 Dispatch
+=item Dispatch
 
 This POE event handler takes care of dispatching once POE is running fully.
 It maintains a counter to ensure that the test queue does not become stuck.
@@ -1018,7 +1065,7 @@ sub Dispatch {
 	return('Dispatch_'.$self->alias);
 }
 
-=head3 PostRequest
+=item PostRequest
 
 B<PostReuqest> is a required POE event handler for all Transports. Well, all
 transports except this one. It currently does nothing.
@@ -1036,7 +1083,7 @@ sub PostRequest {
 	# are checked in PostResponse? It shouldn't, I think.
 }
 
-=head3 PostResponse
+=item PostResponse
 
 B<PostResponse> is a required POE event handler for all Transports.
 It takes a TCLI Response as an argument. Typically
@@ -1063,7 +1110,7 @@ sub PostResponse {
 	push( @{ $responses[$$self]->{$response->id} }, $response  );
 
 	$self->Verbose($self->alias.":PostResponse: responses(".@{ $responses[$$self]->{$response->id} }.
-		") ",1,$responses[$$self]->{$response->id} );
+		") ",3,$responses[$$self]->{$response->id} );
 
 	# Work off of the first response for tracking.
 
@@ -1088,7 +1135,7 @@ sub PostResponse {
 		$test = $self->request_tests->{ $response->id }->[$index];
 #		$test = $response_prime->shift_test_array;
 
-		$self->Verbose($self->alias.":PostResponse: test dump ",1,$test);
+		$self->Verbose($self->alias.":PostResponse: test dump ",3,$test);
 		if (defined ($test))
 		{
 			($another, $again) = $self->do_test($test, $response);
@@ -1139,7 +1186,7 @@ sub PostResponse {
 	}
 }
 
-=head3 SendChangeContext
+=item SendChangeContext
 
 B<SendChangeContext> is a POE event handler required for all Transports. Well,
 all I<other> Transports, as this one still thinks it is special enough not to
@@ -1156,9 +1203,9 @@ sub SendChangeContext {
 
 }
 
-=head3 SendRequest
+=item SendRequest
 
-B<SendRequest> is POE event handler that is required for all Transports.
+B<SendRequest> is a POE event handler that is required for all Transports.
 It takes a Agent::TCLI::Request as an argument
 
 =cut
@@ -1215,9 +1262,17 @@ sub SendRequest {
 	return(  );
 }
 
+=item Timeout
+
+B<Timeout> is a POE event handler that makes sure that a test script completes
+and no requests leave the system waiting too long for a response. It takes
+an argument of the delay, in seconds, that it will wait until checking again.
+
+=cut
+
 sub Timeout {
 	my ($kernel,  $self, $session, $delay, ) =
-	  @_[KERNEL, OBJECT,  SESSION,     ARG0,    ARG1,    ARG2,    ARG3];
+	  @_[KERNEL, OBJECT,  SESSION,     ARG0,  ];
 	$self->Verbose($self->alias.":Timeout: {".$delay.
 		"} run(".$self->running.")  dc(".$dispatch_counter[$$self].") dr(".
 		$dispatch_retries[$$self].") tc(".$timeout_counter[$$self].") tr".
@@ -1248,13 +1303,13 @@ sub Timeout {
 	}
 }
 
-=head2 GetControl ( id )
+=item GetControl ( id )
 
 Inherited from Agent::TCLI::Trasnport::Base
 
 =cut
 
-=head2 _shutdown
+=item _shutdown
 
 Shutdown begins the shutdown of all child processes.
 
@@ -1315,7 +1370,7 @@ sub _start {
 	return('_start'.$self->alias);
 }
 
-=head3 _stop
+=item _stop
 
 This POE event handler is called when POE stops a Transport.
 
@@ -1332,36 +1387,6 @@ sub _stop {
 
 	$self->done(0,"Run finished, all tests completed");
 
-#		$self->Verbose($self->alias.":".":stop response dump",3,$response );
-#		my $response_prime = $response->[0];
-#
-#		# are we done with all tests in the original response?
-#		unless ( $response_prime->depth_test_array == 0 )
-#		{
-#			my $test;
-#			my $another = 1;
-#
-#			while ($another)
-#			{
-#				$test = $response_prime->shift_test_array;
-#				$self->Verbose($self->alias.":".":stop test dump ",3,$test);
-#				if (defined ($test))
-#				{
-#					# Put fail in for class
-#					$test->[0] =~ s/-.*$/-fail/;
-#					# unlike PostResonse, we're not going to check for another here
-#					$self->do_test($test, $response->[0]);
-#				}
-#				else
-#				{
-#					# There are not any more to do. :)
-#					$another = 0;
-#				}
-#				next;
-#			}
-#		}
-
-
 	# Sometime timeout is sneaking itself back onto stack during shutdown.
 	$self->Verbose($self->alias.":_stop: removing alarms",1,$kernel->alarm_remove_all() );
 
@@ -1375,14 +1400,16 @@ sub _stop {
 
 #__END__
 
+=back
+
 =head1 AUTHOR
 
-Eric Hacker	 E<lt>hacker at cpan.orgE<gt>
+Eric Hacker	 hacker can be emailed at cpan.org
 
 =head1 BUGS
 
 There is no separation between users running tests, which means it
-could be very ugly to have multiple users try to run tests on one TCLI bot.
+could be very ugly to have multiple users try to run tests on one TCLI Agent.
 
 Test scripts not thorough enough.
 
@@ -1390,7 +1417,7 @@ Probably many others.
 
 =head1 LICENSE
 
-Copyright (c) 2006, Alcatel Lucent, All rights resevred.
+Copyright (c) 2007, Alcatel Lucent, All rights resevred.
 
 This package is free software; you may redistribute it
 and/or modify it under the same terms as Perl itself.

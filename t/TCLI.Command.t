@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-# $Id: TCLI.Command.t 40 2007-04-01 01:56:43Z hacker $
+# $Id: TCLI.Command.t 57 2007-04-30 11:07:22Z hacker $
 
 use Test::More qw(no_plan);
 use lib 'blib/lib';
@@ -79,11 +79,11 @@ ok($test2->handler('cmd2'),'$test2->handler set ');
 is($test2->handler,'cmd2', '$test2->handler get from set');
 
 
-$rc1 = $test1->RawCommand;
-$rc2 = $test2->RawCommand;
-
-is_deeply($rc1,\%cmd1,'$test1->RawCommand');
-is_deeply($rc2,\%cmd2,'$test1->RawCommand');
+#$rc1 = $test1->RawCommand;
+#$rc2 = $test2->RawCommand;
+#
+#is_deeply($rc1,\%cmd1,'$test1->RawCommand');
+#is_deeply($rc2,\%cmd2,'$test1->RawCommand');
 
 #print "rc1".pp($rc1);
 #print "cmd1".pp(\%cmd1);

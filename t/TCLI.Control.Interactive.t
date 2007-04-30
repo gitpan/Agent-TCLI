@@ -1,9 +1,9 @@
 #!/usr/bin/env perl
-# $Id: TCLI.Control.Interactive.t 40 2007-04-01 01:56:43Z hacker $
+# $Id: TCLI.Control.Interactive.t 54 2007-04-26 21:37:55Z hacker $
 
 use warnings;
 use strict;
-use Test::More tests => 43;
+use Test::More tests => 44;
 
 
 # TASK Test suite is not complete. Need more testing for catching errors.
@@ -37,7 +37,7 @@ sub POE::Kernel::TRACE_DEFAULT  () { $poe_td }
 sub POE::Kernel::TRACE_EVENTS  () { $poe_te }
 
 use Agent::TCLI::Transport::Test;
-use Agent::TCLI::Transport::Test::Testee;
+use Agent::TCLI::Testee;
 use POE;
 
 BEGIN {
@@ -51,7 +51,7 @@ sub Init {
 my @obj_cmds = (
 		Agent::TCLI::Command->new(
 	        'name'		=> 'meganat',
-	        'contexts'	=> {'/' => 'meganat'},
+	        'contexts'	=> {'ROOT' => 'meganat'},
     	    'help' 		=> 'sets up outbound NAT table from a predefined address block',
         	'usage'		=> 'meganat add target=target.example.com',
         	'topic'		=> 'attack prep',
@@ -61,7 +61,7 @@ my @obj_cmds = (
 		),
 		Agent::TCLI::Command->new(
 	        'name'		=> 'noreset',
-	        'contexts'	=> {'/' => 'noreset'},
+	        'contexts'	=> {'ROOT' => 'noreset'},
     	    'help' 		=> 'sets up outbound filters to block TCP RESETS to target',
         	'usage'		=> 'noreset add target=target.example.com',
         	'topic'		=> 'attack prep',
@@ -97,7 +97,7 @@ my @obj_cmds = (
 		),
 		Agent::TCLI::Command->new(
 	        'name'		=> 'test_all',
-	        'contexts'	=> {'/' => 'test_all'},
+	        'contexts'	=> {'ROOT' => 'test_all'},
     	    'help' 		=> 'under test_all is one handler for everything',
         	'usage'		=> 'test_all anything',
         	'topic'		=> 'all',
@@ -107,7 +107,7 @@ my @obj_cmds = (
 		),
 		Agent::TCLI::Command->new(
 	        'name'		=> 'all',
-	        'contexts'	=> {'test_all' => 'A*'},
+	        'contexts'	=> {'test_all' => 'ALL'},
     	    'help' 		=> 'anything in context test_all',
         	'usage'		=> 'anything',
         	'topic'		=> 'all',
@@ -121,17 +121,17 @@ my @obj_cmds = (
 				'meganat' 	=> 'show',
 				'noresets'	=> 'show',
 				'test1'		=> {
-					'*U'				=> 'show',
+					'GROUP'				=> 'show',
 					'test1.1'		=> {
 						'test1.1.1'		=> 'show',
 						'test1.1.2'		=> 'show',
 						'test1.1.3'		=> 'show',
 						},
 					'test1.2'		=> {
-						'*U'		=> 'show',
+						'GROUP'		=> 'show',
 						},
 					'test1.3'		=> {
-						'*U'		=> 'show',
+						'GROUP'		=> 'show',
 						},
 					},
 				},
@@ -144,7 +144,7 @@ my @obj_cmds = (
 		),
 		Agent::TCLI::Command->new(
 	        'name'		=> 'test1',
-	        'contexts'	=> {'/' => 'test1'},
+	        'contexts'	=> {'ROOT' => 'test1'},
     	    'help' 		=> 'test1 help',
         	'usage'		=> 'test1 test1.1 test 1.1.1',
         	'topic'		=> 'testing',
@@ -189,7 +189,7 @@ my @dc = (
         usage 		=> 'echo <something> or /echo ...',
         topic 		=> 'general',
         command 	=> 'pre-loaded',
-        contexts   	=> ['*'],
+        contexts   	=> ['UNIVERSAL'],
         call_style     	=> 'state',
         handler		=> 'general'
     },
@@ -199,7 +199,7 @@ my @dc = (
         usage     	=> 'Hi',
         topic     	=> 'Greetings',
         command 	=> 'pre-loaded',
-        contexts   	=> ['/'],
+        contexts   	=> ['ROOT'],
         call_style     	=> 'state',
         handler		=> 'general'
     },
@@ -209,7 +209,7 @@ my @dc = (
         usage     	=> 'Hello',
         topic     	=> 'Greetings',
         command 	=> 'pre-loaded',
-        contexts   	=> ['/'],
+        contexts   	=> ['ROOT'],
         call_style     	=> 'state',
         handler		=> 'general'
     },
@@ -219,7 +219,7 @@ my @dc = (
         usage     	=> 'hello',
         topic     	=> 'Greetings',
         command 	=> 'pre-loaded',
-        contexts   	=> ['/'],
+        contexts   	=> ['ROOT'],
         call_style     	=> 'state',
         handler		=> 'general'
     },
@@ -229,7 +229,7 @@ my @dc = (
         usage     	=> 'hi',
         topic     	=> 'Greetings',
         command 	=> 'pre-loaded',
-        contexts   	=> ['/'],
+        contexts   	=> ['ROOT'],
         call_style     	=> 'state',
         handler		=> 'general'
     },
@@ -239,7 +239,7 @@ my @dc = (
         usage     	=> 'context or /context',
         topic     	=> 'general',
         command 	=> 'pre-loaded',
-        contexts   	=> ['/'],
+        contexts   	=> ['ROOT'],
         call_style     	=> 'state',
         handler		=> 'general'
     },
@@ -249,7 +249,7 @@ my @dc = (
         'usage'		=> 'help [ command ] or /help',
         'topic'		=> 'general',
         'command' 	=> 'pre-loaded',
-        'contexts'	=> ['*'],
+        'contexts'	=> ['UNIVERSAL'],
         'call_style'     => 'state',
         'handler'	=> 'help'
     },
@@ -259,17 +259,17 @@ my @dc = (
         'topic' 	=> 'general',
         'name' 		=> 'status',
         'command' 	=> 'pre-loaded',
-        'contexts'	=> ['*'],
+        'contexts'	=> ['UNIVERSAL'],
         'call_style'     => 'state',
         'handler'	=> 'general'
     },
     {
-        'name'      => '/',
+        'name'      => 'ROOT',
         'help' => "restore root context, use '/command' for a one time switch",
         'usage'     => '/   ',
         'topic'     => 'general',
         'command'   => 'pre-loaded',
-        'contexts'   => ['*'],
+        'contexts'   => ['UNIVERSAL'],
         'call_style'     => 'state',
         'handler'	=> 'exit',
     },
@@ -287,7 +287,7 @@ my @dc = (
         'usage'     => 'listcmd (<context>)',
         'topic'     => 'admin',
         'command'   => 'pre-loaded',
-        'contexts'   => ['*'],
+        'contexts'   => ['UNIVERSAL'],
         'call_style'     => 'state',
         'handler'	=> 'listcmd',
     },
@@ -297,7 +297,7 @@ my @dc = (
         'usage'     => 'dumpcmd <cmd>',
         'topic'     => 'admin',
         'command'   => 'pre-loaded',
-        'contexts'   => ['*'],
+        'contexts'   => ['UNIVERSAL'],
         'call_style'     => 'state',
         'handler'	=> 'dumpcmd',
     },
@@ -315,7 +315,7 @@ my @dc = (
         'usage'     => 'exit or /exit',
         'topic'     => 'general',
         'command'   => 'pre-loaded',
-        'contexts'   => ['*'],
+        'contexts'   => ['UNIVERSAL'],
         'call_style'     => 'state',
         'handler'	=> 'exit',
     },
@@ -337,27 +337,11 @@ my $test_base = Agent::TCLI::Package::Base->new({
 	'do_verbose'	=> sub { diag( @_ ) },
 	});
 
-#$test_base->session(
-#	POE::Session->create(
-#		object_states => [
-#          	$test_base => [qw(
-#          		_start
-#          		_stop
-#          		_shutdown
-#          		_default
-#
-#				establish_context
-#				)],
-#      		],
-#		)
-#);
-
-
 # Put some extral commands in there
 $test_base->AddCommands(
 		Agent::TCLI::Command->new(
 	        'name'		=> 'test_all',
-	        'contexts'	=> {'/' => 'test_all'},
+	        'contexts'	=> {'ROOT' => 'test_all'},
     	    'help' 		=> 'under test_all is one handler for everything',
         	'usage'		=> 'test_all anything',
         	'topic'		=> 'all',
@@ -369,7 +353,7 @@ $test_base->AddCommands(
 		),
 		Agent::TCLI::Command->new(
 	        'name'		=> 'all',
-	        'contexts'	=> {'test_all' => 'A*'},
+	        'contexts'	=> {'test_all' => 'ALL'},
     	    'help' 		=> 'anything in context test_all',
         	'usage'		=> 'anything',
         	'topic'		=> 'all',
@@ -382,21 +366,21 @@ $test_base->AddCommands(
 		Agent::TCLI::Command->new(
 	        'name'		=> 'show',
 	        'contexts'	=> {
-	        	'/'			=> 'show',
+	        	'ROOT'			=> 'show',
 				'meganat' 	=> 'show',
 				'noresets'	=> 'show',
 				'test1'		=> {
-					'*U'				=> 'show',
+					'GROUP'				=> 'show',
 					'test1.1'		=> {
 						'test1.1.1'		=> 'show',
 						'test1.1.2'		=> 'show',
 						'test1.1.3'		=> 'show',
 						},
 					'test1.2'		=> {
-						'*U'		=> 'show',
+						'GROUP'		=> 'show',
 						},
 					'test1.3'		=> {
-						'*U'		=> 'show',
+						'GROUP'		=> 'show',
 						},
 					},
 				},
@@ -414,7 +398,7 @@ $test_base->AddCommands(
 		),
 		Agent::TCLI::Command->new(
 	        'name'		=> 'test1',
-	        'contexts'	=> {'/' => 'test1'},
+	        'contexts'	=> {'ROOT' => 'test1'},
     	    'help' 		=> 'test1 is a test command',
         	'usage'		=> 'test1 test1.1 test 1.1.1',
         	'topic'		=> 'testing',
@@ -483,17 +467,18 @@ my $test_master = Agent::TCLI::Transport::Test->new({
 	     'packages' 	=> [ $test_base, ],
     },
 
-#	'verbose'		=> \$verbose,
+	'verbose'		=> \$verbose,
 	'do_verbose'	=> sub { diag( @_ ) },
 	});
 
-my $t = Agent::TCLI::Transport::Test::Testee->new(
+my $t = Agent::TCLI::Testee->new(
 	'test_master'	=> $test_master,
 	'addressee'		=> 'self',
 );
 
 # From here on out, verbose is either on or off because these are queued events.
 #$verbose = 3;
+is($test_base->name,'base', '$test_base->name ');
 
 # are we in the right place?
 $t->like_body('show name',qr(base));
@@ -503,7 +488,7 @@ $t->ok('status');
 $t->ok('hi');
 $t->like_body('echo this',qr(this) );
 $t->like_body('echo that is not this',qr(that is not this) );
-$t->is_body( 'context','Context: /','verify root context');
+$t->is_body( 'context','Context: ROOT','verify root context');
 $t->ok('debug_request');
 $t->ok('nothing');
 $t->ok('exit');
@@ -513,7 +498,7 @@ $t->ok('Verbose');
 #help tests
 $t->is_code( 'help',200, 'help');
 $t->is_code( '/',200, 'root context');
-$t->is_body( 'context','Context: /','verify root context');
+$t->is_body( 'context','Context: ROOT','verify root context');
 $t->is_code( 'test1',200, 'test1 context');
 $t->is_body( 'context','Context: test1','verify test1 context');
 $t->like_body( 'help',qr(test1.1.*?test1.2.*?test1.3)s, "help");
@@ -524,7 +509,7 @@ $t->like_body( 'help',qr(show.*?test1.1.1.*?test1.2.1)s, "help");
 $t->like_body( 'help',qr(global.*?exit.*?help)s, "help with globals");
 $t->like_body( 'help globals',qr(global.*?exit.*?help)s, "help globals in context");
 $t->like_body( 'exit',qr(Context now: test1),"exit ok" );
-$t->is_body( 'exit','Context now: /', 'exit Context now: root');
+$t->is_body( 'exit','Context now: ROOT', 'exit Context now: root');
 $t->like_body( 'help globals',qr(global.*?exit.*?help)s, "help globals at root");
 
 #manual tests
@@ -533,7 +518,7 @@ $t->like_body( 'help globals',qr(global.*?exit.*?help)s, "help globals at root")
 
 $t->is_code( 'manual manual',200, 'manual');
 $t->is_code( '/',200, 'root context');
-$t->is_body( 'context','Context: /','verify root context');
+$t->is_body( 'context','Context: ROOT','verify root context');
 $t->is_code( 'test1',200, 'test1 context');
 $t->is_body( 'context','Context: test1','verify test1 context');
 $t->like_body( 'manual test1.1',qr(testing TLCI)s, "manual test1.1");
@@ -542,7 +527,7 @@ $t->is_body( 'context','Context: test1 test1.1','verify test1.1 context');
 $t->like_body( 'manual test1.1.1',qr(help for command)s, "manual gives help when not defined");
 $t->like_body( 'manual manual',qr(manual command provides detailed)s, "manual for global in context");
 $t->like_body( 'exit',qr(Context now: test1),"exit ok" );
-$t->is_body( 'exit','Context now: /', 'exit Context now: root');
+$t->is_body( 'exit','Context now: ROOT', 'exit Context now: root');
 
 $test_master->run;
 
