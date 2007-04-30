@@ -1,5 +1,8 @@
 Revision history for Agent-TCLI
 
+0.031	Mon Apr 30 07:53:27 EST 2007
+	- Corrected version decimal place error in Transport directory too!
+
 0.030	Mon Apr 30 07:22:52 EST 2007
 	- Corrected version decimal place error.
 

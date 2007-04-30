@@ -128,7 +128,7 @@ use Test::Builder::Module;
 
 use Object::InsideOut qw( Agent::TCLI::Transport::Base Test::Builder::Module);
 
-our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Test.pm 57 2007-04-30 11:07:22Z hacker $))[2];
+our $VERSION = '0.031.'.sprintf "%04d", (qw($Id: Test.pm 57 2007-04-30 11:07:22Z hacker $))[2];
 
 #func#our $TCLI_TEST = Agent::TCLI::Transport::Test->new;
 

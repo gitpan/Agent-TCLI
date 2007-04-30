@@ -34,7 +34,7 @@ use Params::Validate qw(validate_with);
 
 sub VERBOSE () { 0 }
 
-our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: XMPP.pm 54 2007-04-26 21:37:55Z hacker $))[2];
+our $VERSION = '0.031.'.sprintf "%04d", (qw($Id: XMPP.pm 54 2007-04-26 21:37:55Z hacker $))[2];
 
 =head1 INTERFACE
 

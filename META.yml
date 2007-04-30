@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name: Agent-TCLI
-version: 0.030
+version: 0.031
 author:
   - Eric Hacker <hacker@cpan.org>
 abstract: Transactional Contextual Line Interface Agent
@@ -27,7 +27,7 @@ requires:
 provides:
   Agent::TCLI:
     file: lib/Agent/TCLI.pm
-    version: 0.030
+    version: 0.031
   Agent::TCLI::Base:
     file: lib/Agent/TCLI/Base.pm
     version: 0.030.0059
@@ -69,13 +69,13 @@ provides:
     version: 0.030.0059
   Agent::TCLI::Transport::Base:
     file: lib/Agent/TCLI/Transport/Base.pm
-    version: 0.03.0057
+    version: 0.031.0057
   Agent::TCLI::Transport::Test:
     file: lib/Agent/TCLI/Transport/Test.pm
-    version: 0.03.0057
+    version: 0.031.0057
   Agent::TCLI::Transport::XMPP:
     file: lib/Agent/TCLI/Transport/XMPP.pm
-    version: 0.03.0054
+    version: 0.031.0054
   Agent::TCLI::User:
     file: lib/Agent/TCLI/User.pm
     version: 0.030.0059

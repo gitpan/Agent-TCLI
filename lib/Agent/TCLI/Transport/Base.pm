@@ -36,7 +36,7 @@ use Object::InsideOut qw( Agent::TCLI::Base );
 use Data::Dump qw(pp);
 use YAML qw(freeze thaw);
 
-our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Base.pm 57 2007-04-30 11:07:22Z hacker $))[2];
+our $VERSION = '0.031.'.sprintf "%04d", (qw($Id: Base.pm 57 2007-04-30 11:07:22Z hacker $))[2];
 
 =head2 ATTRIBUTES
 
