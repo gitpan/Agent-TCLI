@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name: Agent-TCLI
-version: 0.03
+version: 0.030
 author:
   - Eric Hacker <hacker@cpan.org>
 abstract: Transactional Contextual Line Interface Agent
@@ -27,46 +27,46 @@ requires:
 provides:
   Agent::TCLI:
     file: lib/Agent/TCLI.pm
-    version: 0.03
+    version: 0.030
   Agent::TCLI::Base:
     file: lib/Agent/TCLI/Base.pm
-    version: 0.03.0057
+    version: 0.030.0059
   Agent::TCLI::Command:
     file: lib/Agent/TCLI/Command.pm
-    version: 0.03.0057
+    version: 0.030.0059
   Agent::TCLI::Control:
     file: lib/Agent/TCLI/Control.pm
-    version: 0.03.0057
+    version: 0.030.0059
   Agent::TCLI::Package::Base:
     file: lib/Agent/TCLI/Package/Base.pm
-    version: 0.03.0057
+    version: 0.030.0059
   Agent::TCLI::Package::Tail:
     file: lib/Agent/TCLI/Package/Tail.pm
-    version: 0.03.0057
+    version: 0.030.0059
   Agent::TCLI::Package::Tail::Line:
     file: lib/Agent/TCLI/Package/Tail/Line.pm
-    version: 0.03.0050
+    version: 0.030.0059
   Agent::TCLI::Package::Tail::Test:
     file: lib/Agent/TCLI/Package/Tail/Test.pm
-    version: 0.03.0050
+    version: 0.030.0059
   Agent::TCLI::Package::UnixBase:
     file: lib/Agent/TCLI/Package/UnixBase.pm
-    version: 0.03.0050
+    version: 0.030.0059
   Agent::TCLI::Package::XMPP:
     file: lib/Agent/TCLI/Package/XMPP.pm
-    version: 0.03.0057
+    version: 0.030.0059
   Agent::TCLI::Parameter:
     file: lib/Agent/TCLI/Parameter.pm
-    version: 0.03.0050
+    version: 0.030.0059
   Agent::TCLI::Request:
     file: lib/Agent/TCLI/Request.pm
-    version: 0.03.0057
+    version: 0.030.0059
   Agent::TCLI::Response:
     file: lib/Agent/TCLI/Response.pm
-    version: 0.03.0050
+    version: 0.030.0059
   Agent::TCLI::Testee:
     file: lib/Agent/TCLI/Testee.pm
-    version: 0.03.0053
+    version: 0.030.0059
   Agent::TCLI::Transport::Base:
     file: lib/Agent/TCLI/Transport/Base.pm
     version: 0.03.0057
@@ -78,7 +78,7 @@ provides:
     version: 0.03.0054
   Agent::TCLI::User:
     file: lib/Agent/TCLI/User.pm
-    version: 0.03.0050
+    version: 0.030.0059
 generated_by: Module::Build version 0.2805
 meta-spec:
   url: |-

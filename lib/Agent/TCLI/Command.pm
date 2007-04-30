@@ -1,6 +1,6 @@
 package Agent::TCLI::Command;
 #
-# $Id: Command.pm 57 2007-04-30 11:07:22Z hacker $
+# $Id: Command.pm 59 2007-04-30 11:24:24Z hacker $
 #
 =head1 NAME
 
@@ -116,7 +116,7 @@ to load or define Parameters before Commands that use them.
 use warnings;
 use strict;
 
-our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Command.pm 57 2007-04-30 11:07:22Z hacker $))[2];
+our $VERSION = '0.030.'.sprintf "%04d", (qw($Id: Command.pm 59 2007-04-30 11:24:24Z hacker $))[2];
 
 use Object::InsideOut qw(Agent::TCLI::Base);
 use Getopt::Lucid qw(:all);

@@ -1,6 +1,6 @@
 package Agent::TCLI::Base;
 #
-# $Id: Base.pm 57 2007-04-30 11:07:22Z hacker $
+# $Id: Base.pm 59 2007-04-30 11:24:24Z hacker $
 #
 =head1 NAME
 
@@ -20,7 +20,7 @@ use warnings;
 use strict;
 use Carp;
 
-our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Base.pm 57 2007-04-30 11:07:22Z hacker $))[2];
+our $VERSION = '0.030.'.sprintf "%04d", (qw($Id: Base.pm 59 2007-04-30 11:24:24Z hacker $))[2];
 
 use Object::InsideOut;
 use Data::Dump qw(pp);

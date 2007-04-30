@@ -1,5 +1,5 @@
 package Agent::TCLI::Control;
-# $Id: Control.pm 57 2007-04-30 11:07:22Z hacker $
+# $Id: Control.pm 59 2007-04-30 11:24:24Z hacker $
 
 =pod
 
@@ -58,7 +58,7 @@ use Text::ParseWords;
 
 #sub VERBOSE () { 0 }
 
-our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Control.pm 57 2007-04-30 11:07:22Z hacker $))[2];
+our $VERSION = '0.030.'.sprintf "%04d", (qw($Id: Control.pm 59 2007-04-30 11:24:24Z hacker $))[2];
 
 =head1 INTERFACE
 

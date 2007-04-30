@@ -1,6 +1,6 @@
 package Agent::TCLI::Response;
 #
-# $Id: Response.pm 50 2007-04-25 10:47:17Z hacker $
+# $Id: Response.pm 59 2007-04-30 11:24:24Z hacker $
 #
 =head1 NAME
 
@@ -19,7 +19,7 @@ use Carp;
 
 use Object::InsideOut qw(Agent::TCLI::Request);
 
-our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Response.pm 50 2007-04-25 10:47:17Z hacker $))[2];
+our $VERSION = '0.030.'.sprintf "%04d", (qw($Id: Response.pm 59 2007-04-30 11:24:24Z hacker $))[2];
 
 =head2 ATTRIBUTES
 

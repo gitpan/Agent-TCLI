@@ -1,4 +1,4 @@
-# $Id: Testee.pm 53 2007-04-26 13:43:18Z hacker $
+# $Id: Testee.pm 59 2007-04-30 11:24:24Z hacker $
 package Agent::TCLI::Testee;
 
 =pod
@@ -152,7 +152,7 @@ use Test::Builder::Module;
 
 use Object::InsideOut qw( Agent::TCLI::Base );
 
-our $VERSION = '0.03.'.sprintf "%04d", (qw($Id: Testee.pm 53 2007-04-26 13:43:18Z hacker $))[2];
+our $VERSION = '0.030.'.sprintf "%04d", (qw($Id: Testee.pm 59 2007-04-30 11:24:24Z hacker $))[2];
 
 =over
 
