@@ -1,4 +1,4 @@
-# $Id: Base.pm 57 2007-04-30 11:07:22Z hacker $
+# $Id: Base.pm 62 2007-05-03 15:55:17Z hacker $
 package Agent::TCLI::Transport::Base;
 
 =pod
@@ -36,7 +36,7 @@ use Object::InsideOut qw( Agent::TCLI::Base );
 use Data::Dump qw(pp);
 use YAML qw(freeze thaw);
 
-our $VERSION = '0.031.'.sprintf "%04d", (qw($Id: Base.pm 57 2007-04-30 11:07:22Z hacker $))[2];
+our $VERSION = '0.031.'.sprintf "%04d", (qw($Id: Base.pm 62 2007-05-03 15:55:17Z hacker $))[2];
 
 =head2 ATTRIBUTES
 
@@ -230,6 +230,22 @@ sub _shutdown :Cumulative {
     return("_shutdown ".$self->alias  );
 }
 
+sub ControlExecute {
+	my ($kernel,  $self, $control, $request ) =
+	  @_[KERNEL, OBJECT,     ARG0,     ARG1 ];
+	$self->Verbose("ControlExecute: control(".$control->id.") req(".$request->id.") ");
+
+	# Sometimes, control has not started, so we wiat if we have to.
+	if ( defined($control->start_time) )
+	{
+		$kernel->post( $control->id() => 'Execute' => $request );
+	}
+	else
+	{
+		$kernel->delay('ControlExecute' => 1 => $control, $request );
+	}
+}
+
 =item PackRequest
 
 This object method is used by transports to prepare a request for transmssion.
@@ -308,7 +324,7 @@ sub UnpackRequest {
 	$request->verbose($self->verbose);
 	$request->do_verbose($self->do_verbose);
 
-	$self->Verbose("UnpackRequest: unpacked ".$request->dump(1) );
+	$self->Verbose("UnpackRequest: unpacked ".$request->dump(1),3 );
 
 	return($request);
 }
@@ -349,7 +365,7 @@ sub UnpackResponse {
 	$response->verbose($self->verbose);
 	$response->do_verbose($self->do_verbose);
 
-	$self->Verbose("UnpackResponse: unpacked ".$response->dump(1) );
+	$self->Verbose("UnpackResponse: unpacked ".$response->dump(1),3 );
 
 	return($response);
 }

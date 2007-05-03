@@ -1,4 +1,4 @@
-# $Id: Test.pm 57 2007-04-30 11:07:22Z hacker $
+# $Id: Test.pm 62 2007-05-03 15:55:17Z hacker $
 package Agent::TCLI::Transport::Test;
 
 =pod
@@ -9,38 +9,38 @@ Agent::TCLI::Transport::Test - transport for testing commands
 
 =head1 SYNOPSIS
 
-use Test::More qw(no_plan);
-ues Agent::TCLI::Transport::Test;
-use Agent::TCLI::Package::Tail;
+	use Test::More qw(no_plan);
+	ues Agent::TCLI::Transport::Test;
+	use Agent::TCLI::Package::Tail;
 
-# set the list of packages
-my @packages = (
-	Agent::TCLI::Package::Tail->new({
-		'verbose'		=> \$verbose,
+	# set the list of packages
+	my @packages = (
+		Agent::TCLI::Package::Tail->new({
+			'verbose'		=> \$verbose,
+			'do_verbose'	=> sub { diag( @_ ) },
+		}),
+	);
+
+
+	my $test_master = Agent::TCLI::Transport::Test->new({
+	    'verbose'   	=> \$verbose,        # Verbose sets level
+
+	    # change verbose output to Test::More::diag
 		'do_verbose'	=> sub { diag( @_ ) },
-	}),
-);
 
+		# load up the packages to support testing
+	    'control_options'	=> {
+		    'packages' 		=> \@packages,
+	    },
+	});
 
-my $test_master = Agent::TCLI::Transport::Test->new({
-    'verbose'   	=> \$verbose,        # Verbose sets level
+	# need at least one testee
 
-    # change verbose output to Test::More::diag
-	'do_verbose'	=> sub { diag( @_ ) },
-
-	# load up the packages to support testing
-    'control_options'	=> {
-	    'packages' 		=> \@packages,
-    },
-});
-
-# need at least one testee
-
-# Set up the local test
-my $target = Agent::TCLI::Testee->new(
-	'test_master'	=> $test_master,
-	'addressee'		=> 'self',
-);
+	# Set up the local test
+	my $target = Agent::TCLI::Testee->new(
+		'test_master'	=> $test_master,
+		'addressee'		=> 'self',
+	);
 
 =head1 DESCRIPTION
 
@@ -128,7 +128,7 @@ use Test::Builder::Module;
 
 use Object::InsideOut qw( Agent::TCLI::Transport::Base Test::Builder::Module);
 
-our $VERSION = '0.031.'.sprintf "%04d", (qw($Id: Test.pm 57 2007-04-30 11:07:22Z hacker $))[2];
+our $VERSION = '0.031.'.sprintf "%04d", (qw($Id: Test.pm 62 2007-05-03 15:55:17Z hacker $))[2];
 
 #func#our $TCLI_TEST = Agent::TCLI::Transport::Test->new;
 
@@ -231,7 +231,8 @@ B<responses> will only contain hash values.
 =cut
 my @responses		:Field
 					:Type('hash')
-					:All('responses');
+					:Arg('name'=>'responses', 'default'=> { } )
+					:Acc('responses');
 
 =item responses_max_contiguous
 
@@ -439,6 +440,97 @@ sub done {
 
 	return ($ready);
 }
+
+=item done_id(<id>, <timeout>, <name> )
+
+B<done_id> works similarly to B<done> except that it waits only for the
+results from one request, as specified by the id. If a request id is not
+supplied, it will default to the last request made.
+
+It takes an optional timeout parameter, an integer in seconds. The default timeout
+is 31 seconds if none is supplied.
+
+It takes an option parameter of a test name.
+
+=cut
+
+sub done_id {
+	my ($self, $id, $wait, $name) = @_;
+
+	$wait = 31 unless defined $wait;
+	my $start = time();
+	my $ready = 0;
+
+	# validate id
+	unless ( defined($id) && $id )
+	{
+		# Use last id if not supplied
+		$id = $self->make_id( $request_count[$$self] );
+	}
+
+	$self->Verbose($self->alias.":done_id: id($id) start($start) wait($wait)",1);
+
+	# Clean out anything in kernel queue
+#	$poe_kernel->run_one_timeslice unless ($self->running || $wait == 0 );
+
+	# Try to finish up anything left out there.
+	while ( $start + $wait > time() )
+	{
+		$self->Verbose($self->alias.":done_id: end(".($start + $wait).") time(".time().")  ",3);
+		# make sure there is nothing in request queue
+		$self->dispatch;
+		$ready = $self->post_it('done');
+		# Clean out anything in kernel queue
+		$poe_kernel->run_one_timeslice;
+		last if $ready;
+		next;
+	}
+
+	$ready = $self->post_it('done') if ($wait == 0);
+
+	if  ( (not $ready && $wait == 0 )  ||
+		($ready && $wait > 0 ) )
+	{
+		$self->Verbose($self->alias.":done: ".
+			" run(".$self->running.")  dc(".$dispatch_counter[$$self].") dr(".
+			$dispatch_retries[$$self].") tc(".$timeout_counter[$$self].") tr(".
+			$timeout_retries[$$self].") requests(".$self->depth_requests.") ");
+		$self->Verbose($self->alias.":done: count(".$request_count[$$self].
+			") contiguous(".$self->responses_max_contiguous.")");
+	}
+
+	# there may be tests left in request_tests.
+	# Some will be all type tests (ares...), which do not matter.
+	# but some will need to be failed.
+
+	my $test;
+
+	TEST: while ( @{ $self->request_tests->{ $id } } )
+	{
+		$test = shift @{ $self->request_tests->{ $id } };
+		# if this is an multi response test, then skip it
+		if ( $test->[0] =~ qr(are) )
+		{
+			next TEST;
+		}
+
+		# any other test must fail if there is no response
+
+		$self->builder->ok( 0, $test->[3] );
+		$self->builder->diag("Response not recieved for this test's request.");
+
+	}
+
+	if ( defined($name) && $name ne '' )
+	{
+		$test_count[$$self]++;
+		$self->builder->ok( $ready, $name );
+	}
+	$self->Verbose($self->alias.":done: ready($ready) ");
+
+	return ($ready);
+}
+
 
 =item load_testee ( <testee> )
 
@@ -728,6 +820,8 @@ sub do_test {
 	# $t is [ test-class , expected, expected2, name ]
 
     # special case for code 100 / class code
+    # Preserves and skips all tests if a 100 is received and not looking
+    # for it.
     if ( $class eq 'code' && $value == 100 && $t->[1] != 100 )
     {
     	# skip the test unless testing for 100
@@ -737,6 +831,7 @@ sub do_test {
 		# skip the rest of the tests for this response too.
     	return ($another, $again);
     }
+
 	my $res;
 	# Let's do it.
 	$self->Verbose($self->alias.
@@ -755,6 +850,11 @@ sub do_test {
 	elsif ($test =~ qr(success) )
 	{
 		$res = $self->builder->ok( ( $value >= 200 && $value <= 299 ) , $t->[3] );
+		$self->builder->diag($response->body) if (!$res);
+	}
+	elsif ($test =~ qr(trying) )
+	{
+		$res = $self->builder->ok( ( $value >= 100 && $value <= 199 ) , $t->[3] );
 		$self->builder->diag($response->body) if (!$res);
 	}
 
@@ -776,8 +876,9 @@ B<get_param> is an internal method that supports the Testee get_param command.
 It requires a param argument that is the parameter to try and obtain a value
 for. It takes an optional request id from a prior request. If not
 supplied, it will use the last request made. It also takes an optional
-timeout value, which will be passed to B<done> to wait for all responses
-to come in.
+timeout value, which will be passed to B<done_id>
+to wait for all responses to that request to come in.
+
 B<get_param> attempts to parse the text in the responses to find the value
 for the parameter being requested. It expects that the response is
 formatted appropriately to extract the parameter.
@@ -807,35 +908,42 @@ sub get_param {
 	my $value;
 
 	# validate id
-	if ( !defined($id) || $id eq '' )
+	unless ( defined($id) && $id )
 	{
 		# Use last id if not supplied
-		$id = $self->make_id( $request_count[$$self])
+		$id = $self->make_id( $request_count[$$self]);
 	}
 
-	if ( defined($timeout)  )
-	{
-		return(undef) unless ( $self->done($timeout));
-	}
+	$self->Verbose("get_param: param($param) id($id) timeout($timeout)  ",1);
+
+	$self->done_id( $id, $timeout) if ( defined($timeout) );
 
 	return(undef) unless (exists($self->responses->{$id}));
+
+	$self->Verbose("get_param: id($id) timeout($timeout) count(".
+		@{ $self->responses->{$id} }.") ",2);
 
 	# loop through responses, last first
 	RESPONSE: foreach my $response ( reverse @{$self->responses->{$id}} )
 	{
+		$self->Verbose('get_param: body('.$response->body.') ',3);
+
 		# any valid format in double quotes
-		if ( $value = ( $response->body =~ qr($param(?:=|\s|:\s)"(.*?)") ) )
+		if (  $response->body =~ qr($param(?:=|\s|:\s)"(.*?)") )
 		{
+			$value = $1;
 			last RESPONSE
 		}
 		# = or space followed by a word
-		elsif ( $value = ( $response->body =~ qr($param(?:=|\s)(\S*)) ) )
+		elsif ( $response->body =~ qr($param(?:=|\s)(\S*))  )
 		{
+			$value = $1;
 			last RESPONSE
 		}
 		# yaml to the end of the line
-		elsif ( $value = ( $response->body =~ qr($param(?::\s)(.*)$)m ) )
+		elsif ( $response->body =~ qr($param(?::\s)(.*?)\s*$)m )
 		{
+			$value = $1;
 			last RESPONSE
 		}
 
@@ -863,20 +971,18 @@ sub get_responses {
 	my $value;
 
 	# validate id
-	if ( !defined($id) || $id eq '' )
+	unless ( defined($id) && $id )
 	{
 		# Use last id if not supplied
 		$id = $self->make_id( $request_count[$$self] );
 	}
+	$self->Verbose("get_responses: id($id)",3);
 
-	if ( defined($timeout)  )
-	{
-		return(undef) unless ( $self->done($timeout));
-	}
+	$self->done_id( $id, $timeout) if ( defined($timeout) );
 
 	return(undef) unless (exists( $self->responses->{$id} ) );
 
-	$self->Verbose("get_responses: id($id) count(".@{ $self->responses->{$id} }.") ",0);
+	$self->Verbose("get_responses: id($id) count(".@{ $self->responses->{$id} }.") ",1);
 	# loop through responses
 	RESPONSE: foreach my $response ( reverse @{ $self->responses->{$id} } )
 	{
@@ -1241,9 +1347,17 @@ sub SendRequest {
 		$self->Verbose($self->alias.":SendRequest: local request \n");
 		$self->Verbose($self->alias.":SendRequest: request dump ".$request->dump(1),3 );
 		# Get a Control for the test-master user loaded into peers.
-		$self->GetControl(	$self->peers->[0]->id, $self->peers->[0] );
+		my $control = $self->GetControl(	$self->peers->[0]->id, $self->peers->[0] );
 		# Post to our Control
-		$kernel->post( $self->peers->[0]->id => 'Execute' => $request );
+		# Sometimes, control has not started, so we wiat if we have to.
+		if ( defined($control->start_time) )
+		{
+			$kernel->post( $control->id => 'Execute' => $request );
+		}
+		else
+		{
+			$kernel->delay('ControlExecute' => 1 => $control, $request );
+		}
 	}
 	else
 	{
@@ -1256,7 +1370,7 @@ sub SendRequest {
 		$request->push_sender($self->alias);
 		$request->push_postback('PostResponse');
 
-		$kernel->post( $sender => $postback => $request );
+		$kernel->call( $sender => $postback => $request );
 	}
 
 	return(  );

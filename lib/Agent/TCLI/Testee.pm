@@ -1,4 +1,4 @@
-# $Id: Testee.pm 59 2007-04-30 11:24:24Z hacker $
+# $Id: Testee.pm 62 2007-05-03 15:55:17Z hacker $
 package Agent::TCLI::Testee;
 
 =pod
@@ -152,7 +152,7 @@ use Test::Builder::Module;
 
 use Object::InsideOut qw( Agent::TCLI::Base );
 
-our $VERSION = '0.030.'.sprintf "%04d", (qw($Id: Testee.pm 59 2007-04-30 11:24:24Z hacker $))[2];
+our $VERSION = '0.030.'.sprintf "%04d", (qw($Id: Testee.pm 62 2007-05-03 15:55:17Z hacker $))[2];
 
 =over
 
@@ -199,6 +199,16 @@ my @addressee		:Field
 					:Arg('name'=>'addressee','default'=>'self')
 					:Acc('addressee');
 
+=item last_request
+
+The last request id that was used.
+B<last_request> will only contain scalar values.
+
+=cut
+my @last_request			:Field
+#					:Type('scalar')
+					:All('last_request');
+
 # Standard class utils are inherited
 =back
 
@@ -218,10 +228,18 @@ my @addressee		:Field
 		'do_verbose'	=> # a sub to use for verbose output
 	});
 
-	See the Attributes for more information on what each one does.
-	I<verbose> and I<do_verbose> are inherited from Agent::TCLI::Base;
+See the Attributes for more information on what each one does.
+I<verbose> and I<do_verbose> are inherited from Agent::TCLI::Base;
 
 =back
+
+=head2 Test requests
+
+Unlike L<Test::More>, the first parameter for all Testee tests is a
+request to send the the testee. The value evaluate to the text command that
+one wants to send the Testee. This command is exactly the same as one would
+use in the command line interface. One may submit an empty request
+to add an additional test to the prior request.
 
 =head2 Test names
 
@@ -235,8 +253,8 @@ a test with no name, explicitly use an empty string as the test_name.
 
   ok ( 'some request', <test_name> );
 
-ok() makes a request of the testee and passes if the response
-has a code indicating success. ok is really just an alias for is_success
+B<ok> makes a request of the testee and passes if the response
+has a code indicating success. B<ok> is really just an alias for B<is_success>
 and they can be used interchangably. If the test fails, the response body
 will be output with the diagnostics.
 
@@ -244,11 +262,12 @@ will be output with the diagnostics.
 
 sub is_success {
 	my $self = shift;
+
 	# Must sneak an extra param in there so do_test will check codes correctly
-	return(
-		$self->test_master->build_test($self, 'is_success-code',
-		$_[0], 1, '', $_[1])
-	);
+	$self->last_request(	$self->test_master->build_test($self, 'is_success-code',
+		$_[0], 1, '', $_[1]) );
+
+	return( $self->last_request );
 }
 
 *ok = \&is_success;
@@ -256,18 +275,19 @@ sub is_success {
 sub are_successes {
 	my $self = shift;
 	# Must sneak an extra param in there so do_test will check codes correctly
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'are_success-code',
 		$_[0], 1, '', $_[1])
 	);
+	return( $self->last_request);
 }
 
 =item not_ok / is_error
 
   not_ok ( 'some request', <test_name> );
 
-not_ok() makes a request of the testee and passes if the response
-has a code indicating failure. not_ok is really just an alias for is_error
+B<not_ok> makes a request of the testee and passes if the response
+has a code indicating failure. B<not_ok> is really just an alias for B<is_error>
 and they can be used interchangably. If the test fails, the response body
 will be output with the diagnostics.
 
@@ -276,21 +296,52 @@ will be output with the diagnostics.
 sub is_error {
 	my $self = shift;
 	# Must sneak an extra param in there so do_test will check codes correctly
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'is_error-code',
 		$_[0], 1, '', $_[1])
 	);
+	return( $self->last_request);
 }
 
 *not_ok = \&is_error;
 
+#=item do / is_trying
+#
+#  do ( 'some request', <timeout>, <test_name> );
+#
+#Some commands, such as setting a tail or watch, will not return response
+#with content immediately. These may however return a response with a
+#seies 100 code for Trying. B<do> makes a request of the testee and passes
+#if a Trying response is received within the timeout in seconds.
+#B<do> is really just an alias for B<is_trying>
+#and they can be used interchangably. If the test fails, the response body
+#will be output with the diagnostics.
+#One must follow up with other tests if checking actual responses is necesary.
+#
+#
+#=cut
+# Need to fix do_test as well as check for other issues before enabling
+#sub is_trying {
+#	my $self = shift;
+#	# Must sneak an extra param in there so do_test will check codes correctly
+#	$self->last_request(
+#		$self->test_master->build_test($self, 'is_trying-code',
+#		$_[0], 1, '', $_[1])
+#	);
+#	return( $self->last_request);
+#}
+#
+#*do = \&is_trying;
+
+
 sub are_errors {
 	my $self = shift;
 	# Must sneak an extra param in there so do_test will check codes correctly
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'are_error-code',
 		$_[0], 1, '', $_[1])
 	);
+	return( $self->last_request);
 }
 
 =item is_body
@@ -309,18 +360,20 @@ test failed.
 
 sub is_body {
 	my $self = shift;
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'is_eq-body',
 		$_[0], $_[1], '', $_[2] )
 	);
+	return( $self->last_request);
 }
 
 sub are_bodies {
 	my $self = shift;
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'are_eq-body',
 		$_[0], $_[1], '', $_[2] )
 	);
+	return( $self->last_request);
 }
 
 =item is_code
@@ -336,18 +389,20 @@ comparison, and the body of the response.
 
 sub is_code {
 	my $self = shift;
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'is_num-code',
 		$_[0], $_[1], '', $_[2] )
 	);
+	return( $self->last_request);
 }
 
 sub are_codes {
 	my $self = shift;
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'are_num-code',
 		$_[0], $_[1], '', $_[2] )
 	);
+	return( $self->last_request);
 }
 
 =item like_body
@@ -363,18 +418,20 @@ test failed.
 
 sub like_body {
 	my $self = shift;
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'like-body',
 		$_[0], $_[1], '', $_[2] )
 	);
+	return( $self->last_request);
 }
 
 sub like_bodies {
 	my $self = shift;
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'are_like-body',
 		$_[0], $_[1], '', $_[2] )
 	);
+	return( $self->last_request);
 }
 
 =item unlike_body
@@ -388,18 +445,20 @@ does not match the regex.
 
 sub unlike_body {
 	my $self = shift;
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'unlike-body',
 		$_[0], $_[1], '', $_[2] )
 	);
+	return( $self->last_request);
 }
 
 sub unlike_bodies {
 	my $self = shift;
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'unlike-body',
 		$_[0], $_[1], '', $_[2] )
 	);
+	return( $self->last_request);
 }
 
 =item like_code
@@ -416,18 +475,20 @@ current way tests are built, it was easier to have this test than to exclude it.
 
 sub like_code {
 	my $self = shift;
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'like-code',
 		$_[0], $_[1], '', $_[2] )
 	);
+	return( $self->last_request);
 }
 
 sub like_codes {
 	my $self = shift;
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'are_like-code',
 		$_[0], $_[1], '', $_[2] )
 	);
+	return( $self->last_request);
 }
 
 =item unlike_code
@@ -441,60 +502,94 @@ does not match the regex.
 
 sub unlike_code {
 	my $self = shift;
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'unlike-code',
 		$_[0], $_[1], '', $_[2] )
 	);
+	return( $self->last_request);
 }
 
 sub unlike_codes {
 	my $self = shift;
-	return(
+	$self->last_request(
 		$self->test_master->build_test($self, 'are_unlike-code',
 		$_[0], $_[1], '', $_[2] )
 	);
+	return( $self->last_request);
 }
 
-sub get_param {
-	my $self = shift;
-	return(
-		$self->test_master->get_param(
-		$_[0], $_[1], $_[2] )
-	);
-}
+=item get_param ( <param>, [ <id>, <timeout> ] )
 
-sub get_responses {
-	my $self = shift;
-	return(
-		$self->test_master->get_responses(
-		$_[0], $_[1] )
-	);
-}
+B<get_param> will parse the textual responses from a request and attempt
+to extract a value. It requires a param argument that is the parameter
+to try and obtain a value for. It takes an optional request id
+from a prior request. If not supplied, it will use the last request made.
+It also takes an optional timeout value, which will be passed to B<done_id>
+to wait for all responses to that request to come in.
 
-=item preinit
-
-This private Object::InsideOut (OIO) method is used for object initialization.
+B<get_param> attempts to parse the text in the responses to find the value
+for the parameter being requested. It expects that the response is
+formatted appropriately to extract the parameter.
+Valid formats to receive the parameter are:
+	 param=something
+	 param something
+	 param="a quoted string with something"
+	 param "a quoted string with something"
+	 param: a string yaml-ish style, no comments, to the end of the line
+	 param: "a quoted string, just what's in quotes"
+It returns the value of the parameter requested, or undefined if it
+cannot be found.
 
 =cut
 
-sub preinit :PreInit {
+sub get_param {
+	my ($self, $param, $id, $timeout) = @_;
+
+	$id = $self->last_request->id  unless  ( defined($id) && $id );
+
+	return(
+		$self->test_master->get_param(
+		$param, $id, $timeout )
+	);
+}
+
+=item get_responses ( [ <id>, <timeout> ] )
+
+B<get_responses> will retrieve textual responses for a request.
+It takes an optional request id from a prior request. If not
+supplied, it will use the last request made. It also takes an optional
+timeout value.
+It returns the text from all available responses, each separated by a pair
+of newlines.
+Calling <get_responses> forces the completion of all outstanding tests for that
+request. That is, the tests will fail if no-reponses have been received
+before the timeout is reached.
+
+=cut
+
+sub get_responses {
+	my ($self, $id, $timeout) = @_;
+
+	$id = $self->last_request->id  unless ( defined($id) && $id );
+
+	return(
+		$self->test_master->get_responses(
+		$id, $timeout )
+	);
+}
+
+sub _preinit :PreInit {
 	my ($self,$args) = @_;
 
 	$args->{'do_verbose'} = sub { diag( @_ ) } unless defined($args->{'do_verbose'});
 
 }
 
-=item spawn
 
-This private OIO method is used for object initialization.
-
-=cut
-
-sub spawn :Init {
+sub _init :Init {
 	my ($self, $args) = @_;
 
 	$self->test_master->load_testee($self);
-
 }
 
 1;

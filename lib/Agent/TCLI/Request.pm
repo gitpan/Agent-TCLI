@@ -1,6 +1,6 @@
 package Agent::TCLI::Request;
 #
-# $Id: Request.pm 59 2007-04-30 11:24:24Z hacker $
+# $Id: Request.pm 62 2007-05-03 15:55:17Z hacker $
 #
 =head1 NAME
 
@@ -31,7 +31,7 @@ use strict;
 use Object::InsideOut qw(Agent::TCLI::Base);
 use Agent::TCLI::Response;
 
-our $VERSION = '0.030.'.sprintf "%04d", (qw($Id: Request.pm 59 2007-04-30 11:24:24Z hacker $))[2];
+our $VERSION = '0.030.'.sprintf "%04d", (qw($Id: Request.pm 62 2007-05-03 15:55:17Z hacker $))[2];
 
 =head2 ATTRIBUTES
 
@@ -189,8 +189,8 @@ sub MakeResponse {
 		'body'		=> $txt,
 		'code'		=> $code,
 		'id'		=> $self->id,
-		'sender'	=> $self->sender,
-		'postback'	=> $self->postback,
+		'sender'	=> [@{$self->sender}],
+		'postback'	=> [@{$self->postback}],
 		'response_count'=>$self->response_count,
 	);
 
@@ -274,7 +274,7 @@ sub Respond {
 	}
 
 	$self->Verbose("Respond: id(".$id[$$self].") count(".$response_count[$$self].
-		")  code(".$response->code.")",2) if defined($id[$$self]);
+		")  code(".$response->code.")",1) if defined($id[$$self]);
 	$self->Verbose("Respond: sender(".$sender.") pb(".$postback.")");
 	$kernel->call( $sender => $postback => $response );
 }

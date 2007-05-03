@@ -1,6 +1,6 @@
 package Agent::TCLI::Package::Base;
 #
-# $Id: Base.pm 59 2007-04-30 11:24:24Z hacker $
+# $Id: Base.pm 62 2007-05-03 15:55:17Z hacker $
 #
 =head1 NAME
 
@@ -37,7 +37,7 @@ use File::ShareDir;
 $YAML::Syck::Headless = 1;
 $YAML::Syck::SortKeys = 1;
 
-our $VERSION = '0.030.'.sprintf "%04d", (qw($Id: Base.pm 59 2007-04-30 11:24:24Z hacker $))[2];
+our $VERSION = '0.030.'.sprintf "%04d", (qw($Id: Base.pm 62 2007-05-03 15:55:17Z hacker $))[2];
 
 =head2 ATTRIBUTES
 
@@ -81,6 +81,7 @@ my @parameters	:Field
 
 my @session 	:Field
 				:Arg('session')
+				:Get('session')
 				:Weak;
 #				:Type('POE::Session');
 
@@ -122,15 +123,6 @@ be of interest only to developers trying to enhance TCLI.
 
 =over
 
-=item _start
-
-This POE event handler is called when POE starts up a Package.
-The B<_start> method is :Cumulative within OIO. Ideally, most command packages
-could use this Base _start method without implementing
-their own. However there seems to be a race condition between the POE
-initialization and the OIO object initialization. Until this is debugged
-one will probably have to have this _start method in every package.
-
 =cut
 
 sub _preinit :Preinit {
@@ -153,6 +145,13 @@ sub _preinit :Preinit {
 	 unless defined( $args->{'session'} );
 }
 
+# This POE event handler is called when POE starts up a Package.
+# The B<_start> method is :Cumulative within OIO. Ideally, most command packages
+# could use this Base _start method without implementing
+# their own. However there seems to be a race condition between the POE
+# initialization and the OIO object initialization. Until this is debugged
+# one will probably have to have this _start method in every package.
+
 sub _start :Cumulative {
 	my ($kernel,  $self,  $session) =
       @_[KERNEL, OBJECT,   SESSION];
@@ -170,14 +169,7 @@ sub _start :Cumulative {
     $kernel->alias_set($self->name);
 }
 
-=item _shutdown
-
-This POE event handler is used to initiate a shutdown of the Package.
-The B<_shutdown> method is :Cumulative within OIO. Most command packages
-can probably just use this Base _shutown method without implementing
-their own.
-
-=cut
+# This POE event handler is used to initiate a shutdown of the Control.
 
 sub _shutdown :Cumulative {
 	my ($kernel,  $self,) =
@@ -199,12 +191,8 @@ sub _shutdown :Cumulative {
     return ("_shutdown:base ".$self->name )
 }
 
-=item _stop
-
-This POE event handler is called when POE stops a Package.
-The B<_stop> method is :Cumulative within OIO.
-
-=cut
+#This POE event handler is called when POE stops a Package.
+#The B<_stop> method is :Cumulative within OIO.
 
 sub _stop :Cumulative {
     my ($kernel,  $self,) =
@@ -215,11 +203,8 @@ sub _stop :Cumulative {
 	return($self->name.":_stop complete ");
 }
 
-=item _child
-
-Just a placeholder that does nothing but collect unhandled child events to keep them out of default.
-
-=cut
+#Just a placeholder that does nothing but collect unhandled child events
+#to keep them out of default.
 
 sub _child {
   my ($kernel,  $self, $session, $id, $error) =
@@ -274,9 +259,12 @@ This POE event handler is the default show for packages.
 It will accept an argument for the setting to show. It will also take an
 argument of all or * and show all settings.
 
-The parameter must be defined in the command entry's parameters or it will
+The parameter must be defined in the show Command entry's parameters or it will
 not be shown. There must also be a OIO Field defined with the same name.
 One may write their own show method if this is not sufficient.
+
+One must still define the show Command within one's package to use this. One
+must also load the show event handler in the Package's session.
 
 =cut
 

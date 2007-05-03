@@ -1,5 +1,5 @@
 package Agent::TCLI::Control;
-# $Id: Control.pm 59 2007-04-30 11:24:24Z hacker $
+# $Id: Control.pm 62 2007-05-03 15:55:17Z hacker $
 
 =pod
 
@@ -48,17 +48,18 @@ use strict;
 use POE;
 use Carp;
 
-use Object::InsideOut qw(Agent::TCLI::Base);
+use Object::InsideOut qw(Agent::TCLI::Package::Base);
 use Agent::TCLI::Request;
 use Agent::TCLI::Response;
 use Agent::TCLI::Command;
+use Agent::TCLI::Parameter;
 use Params::Validate;
 #use Data::Dump qw(pp);
 use Text::ParseWords;
 
 #sub VERBOSE () { 0 }
 
-our $VERSION = '0.030.'.sprintf "%04d", (qw($Id: Control.pm 59 2007-04-30 11:24:24Z hacker $))[2];
+our $VERSION = '0.030.'.sprintf "%04d", (qw($Id: Control.pm 62 2007-05-03 15:55:17Z hacker $))[2];
 
 =head1 INTERFACE
 
@@ -77,14 +78,14 @@ ID of control. MUST be unique to all other controls and is the POE kernel alias.
 my @id 			:Field
 				:All('id');
 
-=item commands
+=item registered_commands
 
-The collection of registered commands in the control library. Commands may
+The collection of registered_commands in the control library. Commands may
 not be set, but must added with the register method.
 
 =cut
 
-my @commands 	:Field	:Get('commands');
+my @registered_commands 	:Field	:Get('registered_commands');
 
 my @starts 		:Field	:Get('starts');
 
@@ -92,7 +93,8 @@ my @stops 		:Field	:Get('stops');
 
 my @handlers 	:Field	:Get('handlers');
 
-my @start_time	:Field;
+my @start_time	:Field
+				:Get('start_time');
 
 my @user		:Field  :All('user')
 				:Type('Agent::TCLI::User');
@@ -173,9 +175,9 @@ my @poe_debug		:Field
 # Holds our session data. Made weak per Merlyn
 # http://poe.perl.org/?POE_Cookbook/Object_Methods.
 # We also don't take session on init.
-my @session			:Field
-					:Get('session')
-					:Weak;
+#my @session			:Field
+#					:Get('session')
+#					:Weak;
 
 # Standard class utils are inherited
 =back
@@ -184,14 +186,42 @@ my @session			:Field
 
 =over
 
-=item _init
-
-Private. Used by OIO to initialize the Control object.
-
 =cut
 
+sub _preinit :Preinit {
+	my ($self,$args) = @_;
+
+  	$args->{'session'} = POE::Session->create(
+		object_states => [
+          $self => [qw(
+          	_start
+          	_stop
+          	_shutdown
+          	_default
+          	ControlAddState
+          	control_presence
+
+         	AsYouWished
+          	ChangeContext
+          	Execute
+
+			dumpcmd
+			establish_context
+			exit
+          	general
+          	help
+          	manual
+          	net
+          	show
+          	settings
+			)],
+      ],
+      'heap' => $self,
+  	);
+}
+
 sub _init :Init {
-  my $self = shift;
+	my $self = shift;
 
   # Validate arguments
 #  $self->Verbose( "spawn: Validating arguments \n" );
@@ -205,24 +235,28 @@ sub _init :Init {
 #    }
 #  );
 
-  # Register default commands
-  $self->Verbose( "init: Registering default commands \n" );
+   	$self->LoadXMLFile();
 
-  foreach my $cmd ( values %{ $self->_default_commands } )
-  {
-	$self->RegisterCommand($cmd);
-  }
+	# Register default commands
+	$self->Verbose( "init: Registering default commands \n".$self->dump(1),3 );
 
-  # if available, register requested command packages
-  $self->Verbose( "init: Registering user packages \n" );
-
-  if ( defined($packages[$$self] ) ) {
-	my $txt;
-	foreach my $package (@{ $packages[$$self] }) {
-		my $txt = $self->RegisterPackage($package);
-        croak ($txt) if ($txt); # Load fail on start MUST die.
+	foreach my $cmd ( values %{ $self->commands } )
+	{
+		$self->RegisterCommand($cmd);
 	}
-  } # end if packages
+
+	# if available, register requested command packages
+	$self->Verbose( "init: Registering user packages \n" );
+
+	if ( defined($packages[$$self] ) )
+	{
+		my $txt;
+		foreach my $package (@{ $packages[$$self] })
+		{
+			my $txt = $self->RegisterPackage($package);
+        	croak ($txt) if ($txt); # Load fail on start MUST die.
+		}
+	} # end if packages
 
   # Register user commands, if requested #{{{
 #  $self->Verbose( "init: Registering user commands \n" );
@@ -247,44 +281,10 @@ sub _init :Init {
 #
 #  } #end if commands
 
-  if ( defined( $hostname[$$self] ) ) {
-  	$self->set(\@prompt, $id[$$self]." [".$hostname[$$self]."]: ");
-  }
-
-  $self->Verbose( "init: Creating session \n" );
-  $self->set(\@session, POE::Session->create(
-      object_states => [
-          $self => [qw(
-          	_start
-          	_stop
-          	_shutdown
-          	_default
-          	ControlAddState
-          	control_presence
-
-         	AsYouWished
-          	ChangeContext
-          	Execute
-
-			dumpcmd
-			exit
-          	general
-          	help
-          	manual
-          	net
-			)],
-      ],
-      'heap' => $self,
-  ));
-
-  if( $session[$$self] ) {
-  	$self->set(\@start_time, time() );
-	$self->Verbose( "init: SPAWNED at ".$start_time[$$self].
-		" init completed. \n\n");
-	return $self;
-  } else {
-	return undef;
-  }
+	if ( defined( $hostname[$$self] ) )
+	{
+  		$self->set(\@prompt, $id[$$self]." [".$hostname[$$self]."]: ");
+	}
 }
 
 =item Register
@@ -321,7 +321,7 @@ sub Register {
 #    push ( @{ $handlers[$$self] }, \%cmd )  if ( defined ( $cmd{'handler'} ) );
 #    push ( @{ $stops[$$self] },    \%cmd )  if ( defined ( $cmd{'stop'} ) );
 
-	$self->Verbose("Register: commands \n",5,$commands[$$self]);
+	$self->Verbose("Register: commands \n",5,$registered_commands[$$self]);
 
     return 1;
 }
@@ -357,14 +357,14 @@ sub RegisterContexts {
 						{
 							$self->Verbose( "RegisterContext:3.: Adding command "
 							.$v3." in context ".$c1."->".$c2." ");
-							$commands[$$self]{ $c1 }{ $c2 }{ $v3 }{'.'} = $cmd;
+							$registered_commands[$$self]{ $c1 }{ $c2 }{ $v3 }{'.'} = $cmd;
 						}
 						else
 						{
 							$self->Verbose( "RegisterContext:3: Adding command "
 								.$v3.
 								" in context ".$c1."->".$c2."->".$c3);
-							$commands[$$self]{ $c1 }{ $c2 }{ $c3 }{ $v3 }{'.'} = $cmd;
+							$registered_commands[$$self]{ $c1 }{ $c2 }{ $c3 }{ $v3 }{'.'} = $cmd;
 						}
 		   			}
   				}
@@ -374,21 +374,21 @@ sub RegisterContexts {
 					{
 						$self->Verbose( "RegisterContext:2a: Adding command "
 						.$v2c." in context ".$c1."->".$c2." ");
-						$commands[$$self]{ $c1 }{ $c2 }{ $v2c }{'.'} = $cmd;
+						$registered_commands[$$self]{ $c1 }{ $c2 }{ $v2c }{'.'} = $cmd;
 					}
 				}
 				elsif ( $c2 eq '.' )
 				{
 					$self->Verbose( "RegisterContext:2.: Adding command "
 					.$v2." in context ".$c1."->");
-					$commands[$$self]{ $c1 }{ $v2 }{'.'} = $cmd;
+					$registered_commands[$$self]{ $c1 }{ $v2 }{'.'} = $cmd;
 				}
    				else
    				{
 					$self->Verbose( "RegisterContext:2: Adding command "
 						.$v2.
 						" in context ".$c1."->".$c2." ");
-					$commands[$$self]{ $c1 }{ $c2 }{ $v2 }{'.'} = $cmd;
+					$registered_commands[$$self]{ $c1 }{ $c2 }{ $v2 }{'.'} = $cmd;
    				}
    			}
    		}
@@ -398,14 +398,14 @@ sub RegisterContexts {
 			{
 				$self->Verbose( "RegisterContext:1a: Adding command "
 				.$v1c." in context ".$c1." ");
-				$commands[$$self]{ $c1 }{ $v1c }{'.'} = $cmd;
+				$registered_commands[$$self]{ $c1 }{ $v1c }{'.'} = $cmd;
 			}
 		}
 		else
 		{
 			$self->Verbose( "RegisterContext:1: Adding command "
 			.$v1." in context ".$c1." ");
-			$commands[$$self]{ $c1 }{ $v1 }{'.'} = $cmd;
+			$registered_commands[$$self]{ $c1 }{ $v1 }{'.'} = $cmd;
 		}
     }
 	return 1;
@@ -462,7 +462,7 @@ sub FindCommand {
 		$self->Verbose("FindCommand: depth(".$depth.') and @c'." \n",3,\@c);
 	}
 
-	$self->Verbose("FindCommand: current commands hash \n",4,$commands[$$self]);
+	$self->Verbose("FindCommand: current registered_commands hash \n",4,$registered_commands[$$self]);
 
 	# Try to find a match for the context and args in the command hash
 
@@ -471,53 +471,53 @@ sub FindCommand {
 
 	# try first four combined args
 	if ( defined($c[2]) &&
-		defined($commands[$$self]{$c[0]} ) &&
-		defined($commands[$$self]{$c[0]}{$c[1]} ) &&
-		defined($commands[$$self]{$c[0]}{$c[1]}{$c[2]} )
+		defined($registered_commands[$$self]{$c[0]} ) &&
+		defined($registered_commands[$$self]{$c[0]}{$c[1]} ) &&
+		defined($registered_commands[$$self]{$c[0]}{$c[1]}{$c[2]} )
 		)
 	{
 		if ( defined($c[3]) &&
-			defined($commands[$$self]{$c[0]}{$c[1]}{$c[2]}{$c[3]} )
+			defined($registered_commands[$$self]{$c[0]}{$c[1]}{$c[2]}{$c[3]} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{$c[0]}{$c[1]}{$c[2]}{$c[3]}{'.'};
+			$registered_commands[$$self]{$c[0]}{$c[1]}{$c[2]}{$c[3]}{'.'};
 			$thisdepth = 3;
 		}
 		# All handler
 		elsif ( defined($c[3]) &&
-			defined($commands[$$self]{$c[0]}{$c[1]}{$c[2]}{'ALL'} )
+			defined($registered_commands[$$self]{$c[0]}{$c[1]}{$c[2]}{'ALL'} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{$c[0]}{$c[1]}{$c[2]}{'ALL'}{'.'};
+			$registered_commands[$$self]{$c[0]}{$c[1]}{$c[2]}{'ALL'}{'.'};
 			$thisdepth = 3;
 		}
 		# Universal in this context
 		elsif ( defined($c[3]) &&
-			defined($commands[$$self]{$c[0]}{$c[1]}{'GROUP'}) &&
-			defined($commands[$$self]{$c[0]}{$c[1]}{'GROUP'}{$c[3]})
+			defined($registered_commands[$$self]{$c[0]}{$c[1]}{'GROUP'}) &&
+			defined($registered_commands[$$self]{$c[0]}{$c[1]}{'GROUP'}{$c[3]})
 			)
 		{
 			$cmd =
-			$commands[$$self]{$c[0]}{$c[1]}{'GROUP'}{$c[3]}{'.'};
+			$registered_commands[$$self]{$c[0]}{$c[1]}{'GROUP'}{$c[3]}{'.'};
 			$thisdepth = 3;
 		}
 		# $c[3] globally Universal
 		elsif ( defined($c[3]) &&
-			defined($commands[$$self]{'UNIVERSAL'}{$c[3]} )
+			defined($registered_commands[$$self]{'UNIVERSAL'}{$c[3]} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{'UNIVERSAL'}{$c[3]}{'.'};
+			$registered_commands[$$self]{'UNIVERSAL'}{$c[3]}{'.'};
 			$thisdepth = 3;
 		}
 		elsif (
-		 	defined($commands[$$self]{$c[0]}{$c[1]}{$c[2]}{'.'} )
+		 	defined($registered_commands[$$self]{$c[0]}{$c[1]}{$c[2]}{'.'} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{$c[0]}{$c[1]}{$c[2]}{'.'};
+			$registered_commands[$$self]{$c[0]}{$c[1]}{$c[2]}{'.'};
 			$thisdepth = 2;
 		}
 		else
@@ -527,43 +527,43 @@ sub FindCommand {
 	}
 
 	if ( $thisdepth < 0 && defined($c[1]) && $depth <= 2 &&
-		defined($commands[$$self]{$c[0]} ) &&
-		defined($commands[$$self]{$c[0]}{$c[1]} )
+		defined($registered_commands[$$self]{$c[0]} ) &&
+		defined($registered_commands[$$self]{$c[0]}{$c[1]} )
 		)
 	{
 		# All handler
 		if ( defined($c[2]) &&
-			defined($commands[$$self]{$c[0]}{$c[1]}{'ALL'})
+			defined($registered_commands[$$self]{$c[0]}{$c[1]}{'ALL'})
 			)
 		{
 			$cmd =
-			$commands[$$self]{$c[0]}{$c[1]}{'ALL'}{'.'};
+			$registered_commands[$$self]{$c[0]}{$c[1]}{'ALL'}{'.'};
 			$thisdepth = 2;
 		}
 		 # Universal in this context
 		elsif ( defined($c[2]) &&
-			defined($commands[$$self]{$c[0]}{'GROUP'} ) &&
-			defined($commands[$$self]{$c[0]}{'GROUP'}{$c[2]} )
+			defined($registered_commands[$$self]{$c[0]}{'GROUP'} ) &&
+			defined($registered_commands[$$self]{$c[0]}{'GROUP'}{$c[2]} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{$c[0]}{'GROUP'}{$c[2]}{'.'};
+			$registered_commands[$$self]{$c[0]}{'GROUP'}{$c[2]}{'.'};
 			$thisdepth = 2;
 		}
 		# $c[2] globally Universal
 		elsif ( defined($c[2]) &&
-			defined($commands[$$self]{'UNIVERSAL'}{$c[2]} )
+			defined($registered_commands[$$self]{'UNIVERSAL'}{$c[2]} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{'UNIVERSAL'}{$c[2]}{'.'};
+			$registered_commands[$$self]{'UNIVERSAL'}{$c[2]}{'.'};
 			$thisdepth = 2;
 		}
-		elsif ( defined($commands[$$self]{$c[0]}{$c[1]}{'.'} )
+		elsif ( defined($registered_commands[$$self]{$c[0]}{$c[1]}{'.'} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{$c[0]}{$c[1]}{'.'};
+			$registered_commands[$$self]{$c[0]}{$c[1]}{'.'};
 			$thisdepth = 1;
 		}
 		else
@@ -573,34 +573,34 @@ sub FindCommand {
 	}
 
 	if ( $thisdepth < 0 && defined($c[1]) && $depth <= 1 &&
-		defined($commands[$$self]{$c[0]} )
+		defined($registered_commands[$$self]{$c[0]} )
 		)
 	{
 		 # All handler
 		if (
-			defined( $commands[$$self]{$c[0]}{'ALL'} )
+			defined( $registered_commands[$$self]{$c[0]}{'ALL'} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{$c[0]}{'ALL'}{'.'};
+			$registered_commands[$$self]{$c[0]}{'ALL'}{'.'};
 			$thisdepth = 1;
 		}
 		# Universal context
 		elsif (
-			defined( $commands[$$self]{'GROUP'}{$c[1]}
+			defined( $registered_commands[$$self]{'GROUP'}{$c[1]}
 			) )
 		{
 			$cmd =
-			$commands[$$self]{'GROUP'}{$c[1]}{'.'};
+			$registered_commands[$$self]{'GROUP'}{$c[1]}{'.'};
 			$thisdepth = 1;
 		}
 		# $c[1] Globally Universal
 		elsif (
-			defined($commands[$$self]{'UNIVERSAL'}{$c[1]} )
+			defined($registered_commands[$$self]{'UNIVERSAL'}{$c[1]} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{'UNIVERSAL'}{$c[1]}{'.'};
+			$registered_commands[$$self]{'UNIVERSAL'}{$c[1]}{'.'};
 			$thisdepth = 1;
 		}
 		else
@@ -612,11 +612,11 @@ sub FindCommand {
 	if ( $thisdepth < 0 && defined($c[0]) && $depth == 0 )
 	{
 		# Root context
-		if ( defined($commands[$$self]{'ROOT'}{$c[0]} )
+		if ( defined($registered_commands[$$self]{'ROOT'}{$c[0]} )
 			)
 		{
 			$cmd =
-			$commands[$$self]{'ROOT'}{$c[0]}{'.'};
+			$registered_commands[$$self]{'ROOT'}{$c[0]}{'.'};
 			$thisdepth = 0;
 		}
 		# There is no 'ALL' handling at the root context. Make a case and I'll consider it.
@@ -624,11 +624,11 @@ sub FindCommand {
 
 		# Globally Universal
 		elsif ( defined(
-			$commands[$$self]{'UNIVERSAL'}{$c[0]}
+			$registered_commands[$$self]{'UNIVERSAL'}{$c[0]}
 			) )
 		{
 			$cmd =
-			$commands[$$self]{'UNIVERSAL'}{$c[0]}{'.'};
+			$registered_commands[$$self]{'UNIVERSAL'}{$c[0]}{'.'};
 			$thisdepth = 0;
 		}
 		else
@@ -646,7 +646,7 @@ sub FindCommand {
 			$self->Verbose("FindCommand: ".$txt.
 				") code ($code) thisdepth(".$thisdepth.") \n");
 			$self->Verbose("FindCommand: working c array \n",2,\@c);
-			$self->Verbose("FindCommand: current commands hash \n",2,$commands[$$self]);
+			$self->Verbose("FindCommand: current registered_commands hash \n",2,$registered_commands[$$self]);
 	}
 
 	unless ( $txt )
@@ -718,7 +718,7 @@ sub ListCommands {
 
 	$self->Verbose("ListCommand: depth(".$depth.") \n",2,$c);
 
-	$self->Verbose("ListCommand: current commands hash \n",4,$commands[$$self]);
+	$self->Verbose("ListCommand: current registered_commands hash \n",4,$registered_commands[$$self]);
 
 	my (%cmds, $txt, $code, $thisdepth);
 
@@ -730,63 +730,63 @@ sub ListCommands {
 	# issues here probably need to be addressed there as well.
 
 	# Root context
-	if ( $c->[0] eq '/' && defined( $commands[$$self]{'ROOT'} ) )
+	if ( $c->[0] eq '/' && defined( $registered_commands[$$self]{'ROOT'} ) )
 	{
 		# This would allow hashes under / which is not supported by Control.pm
-		push( @aliases , @{ $self->SortCommands( $commands[$$self]{'ROOT'} ) } );
+		push( @aliases , @{ $self->SortCommands( $registered_commands[$$self]{'ROOT'} ) } );
 	}
 	# Global context. Only return if asked for.
-	elsif ( $c->[0] eq '*' && defined( $commands[$$self]{'UNIVERSAL'} ) )
+	elsif ( $c->[0] eq '*' && defined( $registered_commands[$$self]{'UNIVERSAL'} ) )
 	{
 		# This would allow hashes under * which is not supported by Control.pm
-		push( @aliases , @{ $self->SortCommands( $commands[$$self]{'UNIVERSAL'} )  } );
+		push( @aliases , @{ $self->SortCommands( $registered_commands[$$self]{'UNIVERSAL'} )  } );
 	}
 	elsif ( @{$c} == 1 )
 	{
-		if ( defined( $commands[$$self]{ $c->[0] } ) )
+		if ( defined( $registered_commands[$$self]{ $c->[0] } ) )
 		{
-			push( @aliases , @{ $self->SortCommands( $commands[$$self]{ $c->[0] } ) } );
+			push( @aliases , @{ $self->SortCommands( $registered_commands[$$self]{ $c->[0] } ) } );
 		}
 
 # There are no groups allowed at this level currently
-#		elsif ( defined( $commands[$$self]{ 'GROUP' } ) )
+#		elsif ( defined( $registered_commands[$$self]{ 'GROUP' } ) )
 #		{
-#			$aliases =  $self->SortCommands( $commands[$$self]{ 'GROUP' } );
+#			$aliases =  $self->SortCommands( $registered_commands[$$self]{ 'GROUP' } );
 #		}
 	}
 	elsif ( @{$c} == 2 )
 	{
-		if ( defined( $commands[$$self]{ $c->[0] }{ $c->[1] } ) )
+		if ( defined( $registered_commands[$$self]{ $c->[0] }{ $c->[1] } ) )
 		{
-			push( @aliases , @{ $self->SortCommands( $commands[$$self]{ $c->[0] }{ $c->[1] } ) } );
+			push( @aliases , @{ $self->SortCommands( $registered_commands[$$self]{ $c->[0] }{ $c->[1] } ) } );
 		}
 
-		if ( defined( $commands[$$self]{ $c->[0] }{ 'GROUP' } ) )
+		if ( defined( $registered_commands[$$self]{ $c->[0] }{ 'GROUP' } ) )
 		{
-			push( @aliases , @{$self->SortCommands( $commands[$$self]{ $c->[0] }{ 'GROUP' } ) } );
+			push( @aliases , @{$self->SortCommands( $registered_commands[$$self]{ $c->[0] }{ 'GROUP' } ) } );
 		}
 	}
 	elsif ( @{$c} == 3 )
 	{
-		if ( defined( $commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] } ) )
+		if ( defined( $registered_commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] } ) )
 		{
-			push( @aliases , @{ $self->SortCommands( $commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] } ) } );
+			push( @aliases , @{ $self->SortCommands( $registered_commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] } ) } );
 		}
 
-		if ( defined( $commands[$$self]{ $c->[0] }{ $c->[1] }{ 'GROUP' } ) )
+		if ( defined( $registered_commands[$$self]{ $c->[0] }{ $c->[1] }{ 'GROUP' } ) )
 		{
-			push( @aliases , @{ $self->SortCommands( $commands[$$self]{ $c->[0] }{ $c->[1] }{ 'GROUP' } ) } );
+			push( @aliases , @{ $self->SortCommands( $registered_commands[$$self]{ $c->[0] }{ $c->[1] }{ 'GROUP' } ) } );
 		}
 	}
 	elsif ( @{$c} == 4 )
 	{
-		if ( defined( $commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] }{ $c->[3] } ) )
+		if ( defined( $registered_commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] }{ $c->[3] } ) )
 		{
-			push( @aliases , @{ $self->SortCommands( $commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] }{ $c->[3] } ) } );
+			push( @aliases , @{ $self->SortCommands( $registered_commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] }{ $c->[3] } ) } );
 		}
-		if ( defined( $commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] }{ 'GROUP' } ) )
+		if ( defined( $registered_commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] }{ 'GROUP' } ) )
 		{
-			push( @aliases , @{ $self->SortCommands( $commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] }{ 'GROUP' } ) } );
+			push( @aliases , @{ $self->SortCommands( $registered_commands[$$self]{ $c->[0] }{ $c->[1] }{ $c->[2] }{ 'GROUP' } ) } );
 		}
 	}
 
@@ -833,17 +833,17 @@ sub RegisterCommand {
 	$package = defined($package) ? $package."::".$cmd->name :
 		'Control'."::".$cmd->name;
 
-	if ( defined( $commands[$$self]{'registered'}{ $package }) )
+	if ( defined( $registered_commands[$$self]{'registered'}{ $package }) )
 	{
 		# We could die here, but then one would have to iterate over each failure
 		# Though it might be nice to make failure more apparent. A MOTD perhaps?
 		$self->Verbose( "RegisterCommand: ".$cmd->name." already registered! ",0 );
-		$self->Verbose( "RegisterCommand: commands dump  ",1,$self->commands );
+		$self->Verbose( "RegisterCommand: registered_commands dump  ",1,$self->registered_commands );
 	}
 	else
 	{
 		# need to figure out a way to do a reverse lookup on the name...
-		$commands[$$self]{'registered'}{ $package } = $cmd;
+		$registered_commands[$$self]{'registered'}{ $package } = $cmd;
 		$self->RegisterContexts($cmd);
 	}
 
@@ -915,6 +915,13 @@ sub _start {
     my ($kernel,  $self,  $session) =
       @_[KERNEL, OBJECT,   SESSION];
 
+	if (!defined( $self->id ))
+	{
+		$self->Verbose("_start: OIO not done re-starting");
+		$kernel->yield('_start');
+		return;
+	}
+
     $kernel->alias_set("$id[$$self]");
 
     $self->Verbose("_start: Starting commands start routines \n");
@@ -974,7 +981,14 @@ sub _start {
 #        }
 #    }
 
-} # End sub start
+	if( $self->session )
+	{
+  		$self->set(\@start_time, time() );
+		$self->Verbose( "_started: up at ".$self->start_time.
+			" _start completed. \n\n");
+  	}
+
+} # End sub _start
 
 =item stop
 
@@ -1147,6 +1161,8 @@ sub Execute {
 		$input =~ s/'//;
 		# parsewords also parses whitespace at the beginning poorly.
 		$input =~ s/^\s*//;
+		# Parsewords doesn't handle trailing backslashes well.
+		$input =~ s/\\$//;
 	    @args = shellwords($input);
 	}
 
@@ -1769,16 +1785,16 @@ sub dumpcmd {
 	# dump them all if no args
  	if ( $request->ArgsDepth == 0 )
   	{
-		foreach my $cmd ( keys %{ $commands[$$self] } )
+		foreach my $cmd ( keys %{ $registered_commands[$$self] } )
 		{
-			$txt .= $commands[$$self]{$cmd}->dump(1);
+			$txt .= $registered_commands[$$self]{$cmd}->dump(1);
 		}
 	}
 	elsif ( $request->ArgsDepth > 0 )
 	{
 		foreach my $cmd ( @{$request->args} )
 		{
-			$txt .= $commands[$$self]{$cmd}->dump(1);
+			$txt .= $registered_commands[$$self]{$cmd}->dump(1);
 		}
 	}
 
@@ -1795,12 +1811,12 @@ sub dumpcmd {
 #	# TODO this is broken with new commands hash.
 #	if ( $request->depth_args == 0
 #	{     # dump them all
-#		foreach my $context ( $commands[$$self] )
+#		foreach my $context ( $registered_commands[$$self] )
 #		{
 #  			$txt .= "\nCommands in context ".$context." \n\t";
-#  			foreach my $command ( %{ $commands[$$self]{ $context } } )
+#  			foreach my $command ( %{ $registered_commands[$$self]{ $context } } )
 #  			{
-#				$txt .= $commands[$$self]{ $context }{ $command }{'name'}.", ";
+#				$txt .= $registered_commands[$$self]{ $context }{ $command }{'name'}.", ";
 #  			} #end foreach command
 #		} #end foreach context
 #	}
@@ -1815,14 +1831,319 @@ sub dumpcmd {
 #  		# loop over hash1.hash2.hash3.keys getting '.'{'name'}
 #  		# loop over wildcards too
 #
-#		foreach my $cmd ( %{ $commands[$$self]{ $context } } )
+#		foreach my $cmd ( %{ $registered_commands[$$self]{ $context } } )
 #		{
-#			$txt .= $commands[$$self]{ $context }{ $cmd }{'name'}.", ";
+#			$txt .= $registered_commands[$$self]{ $context }{ $cmd }{'name'}.", ";
 #		}
 #	}
 #	$txt =~ s/,\s$//;
 #	$request->Respond( $kernel,  $txt );
 #} #end sub listcmd
+
+
+#=item establish_context
+#
+#This POE event handler is the primary way to set context with a command.
+#Just about any command that has subcommands will use this method as it's handler.
+#An exception would be a command that sets an single handler to process all
+#subcoammnds/args using the 'A*' context. See the Eliza package for an example of
+#how to establish that type of context.
+#
+#=cut
+#
+#sub establish_context {
+#    my ($kernel,  $self, $sender, $request, ) =
+#      @_[KERNEL, OBJECT,  SENDER,     ARG0, ];
+#	$self->Verbose("establish_context: ".$self->name." for request(".
+#		$request->id().")");
+#
+#	my $txt;
+#	# if we have args, then the command is invalid
+#	if ( $request->depth_args > 0 )
+#	{
+#		$txt .= "Invalid input: ".$request->input;
+#		$self->Verbose("establish_context: Invalid input (".$request->input.")"  );
+#		$request->Respond($kernel, $txt, 404) if $txt;
+#		return;
+#	}
+#
+#	# we don't know how deep we're in already. So we'll force a full context shift.
+#	# by sending the entire command array back, which is revesred.
+#	my @context = reverse (@{$request->command});
+#
+#	# We don't actualy set the controls context, but let change context do that.
+#	# It will also inform the user of change.
+#
+#   	# Post context back to sender (Control)
+#   	$kernel->call( $sender => 'ChangeContext' => $request, \@context );
+#	$self->Verbose("establish_context: setting context to "
+#			.join(' ',@context)." ",2);
+#
+#}
+#
+#=item show
+#
+#This POE event handler i will accept an argument for the setting to show.
+#It will also take an argument of all or * and show all settings.
+#
+#The parameter must be defined in the command entry's parameters or it will
+#not be shown. There must also be a OIO Field defined with the same name.
+#One may write their own show method if this is not sufficient.
+#
+#=cut
+#
+#sub show {
+#    my ($kernel,  $self, $sender, $request, ) =
+#      @_[KERNEL, OBJECT,  SENDER,     ARG0, ];
+#	$self->Verbose("show: request(".$request->id.") ",2);
+#
+#	my ($txt, $code, $what, $var);
+#	# calling with show as a command, that is the handler for show is show.
+#	if ( $request->command->[0] eq 'show' ) 	# cmd1 show arg
+#												# cmd1 attacks show <arg>
+#	{
+#		$what = $request->args->[0];
+#	}
+#
+#	$self->Verbose("show: what(".$what.") request->args",1,$request->args);
+#
+#	ATTR: foreach my $attr ( keys %{ $self->commands->{'show'}->parameters } )
+#	{
+#		if ( $what eq $attr || $what =~ qr(^(\*|all)$))
+#		{
+#			if ( $self->can( $attr ) && defined( $self->$attr) )
+#			{
+#				my $ref = ref($self->$attr);
+#				my $show = ( defined($self->parameters ) &&
+#					defined($self->parameters->{ $attr } ) &&
+#					defined($self->parameters->{ $attr }->show_method ) )
+#					? $self->parameters->{ $attr }->show_method
+#					: '';
+#				$self->Verbose("show attr($attr) ref($ref) show($show)",1);
+#				# simple scalar
+#				if ( not $ref)
+#				{
+#					$txt .= "$attr: ".$self->$attr." \n";
+#					$code = 200;
+#				}
+#				# is it an object and show_method is defined?.
+#				elsif ( $ref =~ qr(::) && blessed( $self->$attr )
+#					&& $show )
+#				{
+#					$txt .= "$attr: ".$self->$attr->$show."\n";
+#					$code = 200;
+#				}
+#				# is it an object with dump? Probably OIO.
+#				elsif ( $ref =~ qr(::) && blessed($self->$attr)
+#					&& $self->$attr->can( 'dump') )
+#				{
+#					$var = $self->$attr->dump(0);
+#					$txt .= Dump($var)."\n";
+#					$code = 200;
+#				}
+#				elsif ( $ref =~ qr(HASH) )
+#				{
+#					foreach my $key ( sort keys %{$self->$attr} )
+#					{
+#						my $subref = ref($self->$attr->{ $key }   );
+#						$self->Verbose("show key($key) subref($subref)",0);
+#						# simple scalar
+#						if ( not $subref )
+#						{
+#							$txt .= "$attr ->{ $key }: ".$self->$attr->{$key}." \n";
+#							$code = 200;
+#						}
+#						# is it an object and show_method is defined?.
+#						elsif ( $subref =~ qr(::) &&
+#							blessed($self->$attr->{ $key }) &&
+#							defined($show) )
+#						{
+#							$txt .= "$attr: ".$self->$attr->{$key}->$show."\n";
+#							$code = 200;
+#						}
+#						# is it an object with dump? Probably OIO.
+#						elsif ( $subref =~ qr(::) &&
+#							blessed($self->$attr->{ $key }) &&
+#							$self->$attr->{ $key }->can( 'dump') )
+#						{
+#							$var = $self->$attr->{$key}->dump(0);
+#							$txt .= Dump($var)."\n";
+#							$code = 200;
+#						}
+#						# some other object, array or hash
+#						else
+#						{
+#							$var = $self->$attr->{$key};
+#							$txt .= Dump($var)."\n";
+#							$code = 200;
+#						}
+#					}
+#				}
+#				elsif ( $ref =~ qr(ARRAY) )
+#				{
+#					my $i = 0;
+#					foreach my $val ( @{$self->$attr} )
+#					{
+#						my $subref = ref( $val );
+#						# simple scalar
+#						if ( not $subref )
+#						{
+#							$txt .= "$attr ->[ $i ]: ".$val." \n";
+#							$code = 200;
+#						}
+#						# is it an object and show_method is defined?.
+#						elsif ( $subref =~ qr(::) &&
+#							blessed($val) &&
+#							defined($show) )
+#						{
+#							$txt .= "$attr: ".$val->$show."\n";
+#							$code = 200;
+#						}
+#						# is it an object with dump? Probably OIO.
+#						elsif ( $subref =~ qr(::) &&
+#							blessed($val) &&
+#							$val->can( 'dump') )
+#						{
+#							$var = $val->dump(0);
+#							$txt .= Dump($var)."\n";
+#							$code = 200;
+#						}
+#						# some other object, array or hash
+#						else
+#						{
+#							$txt .= Dump($val)."\n";
+#							$code = 200;
+#						}
+#					}
+#				}
+#				# some other object
+#				else
+#				{
+#					$var = $self->$attr;
+#					$txt .= Dump($var)."\n";
+#					$code = 200;
+#				}
+#			}
+#			elsif ( $self->can( $attr )  )
+#			{
+#		  		$txt = $what.": #!undefined";
+#				$code = 200;
+#			}
+#			else # should get here, but might if parameter error.
+#		  	{
+#  				$txt = $what.": #!ERROR does not exist";
+#  				$code = 404;
+#  			}
+#		}
+#	}
+#
+#	# if we didn't find anything at all, then a 404 is returned
+#  	if (!defined($txt) || $txt eq '' )
+#  	{
+#  		$txt = $what.": #!ERROR not found";
+#  		$code = 404;
+#  	}
+#
+#	$request->Respond($kernel, $txt, $code);
+#}
+#
+#=item settings
+#
+#This POE event handler executes the set commands.
+#
+#=cut
+#
+#sub settings {  # Can't call it set
+#    my ($kernel,  $self, $sender, $request, ) =
+#      @_[KERNEL, OBJECT,  SENDER,     ARG0, ];
+#
+#	my $txt = '';
+#	my ($param, $code);
+#	my $command = $request->command->[0];
+#	# called directly because $command may be an alias and not the real name
+#	my $cmd = $self->commands->{'set'};
+#
+#	# TODO a way to unset/restore defaults....
+#
+#	# break down and validate args
+#	return unless ($param = $cmd->Validate($kernel, $request) );
+#
+#	$self->Verbose("set: param dump",1,$param);
+#
+#	# Get meta data
+#	my $meth = $self->meta->get_methods();
+#
+#	foreach my $attr ( keys %{$param} )
+#	{
+#		# param will have all fields defined, gotta skip the empty ones.
+#		# Can't use ne due to NetAddr::IP bug
+#		next unless (defined($param->{$attr})
+##			&& !($param->{$attr} eq '')  # diabled, since we should be OK now.
+#			);
+#
+#		$self->Verbose("settings: setting attr($attr) => ".
+#			$param->{$attr}." ");
+#
+#		# is there a field type object for this attr?
+#		if ( ref($param->{$attr}) eq '' &&
+#			exists( $meth->{$attr} ) &&
+#			exists( $meth->{$attr}{'type'} ) &&
+#			$meth->{$attr}{'type'} =~ /::/ )
+#		{
+#			my $class = $meth->{$attr}{'type'};
+#			$self->Verbose("set: class($class) param($param) attr($attr) ");
+#			my $obj;
+#			eval {
+#				no strict 'refs';
+#				$obj = $class->new($param->{$attr});
+#			};
+#			# If it went bad, error and return nothing.
+#			if( $@ )
+#			{
+#				$@ =~ qr(Usage:\s(.*)$)m ;
+#				$txt = $1;
+#				$self->Verbose('set: new '.$class.' got ('.$txt.') ');
+#				$request->Respond($kernel,  "Invalid: $attr !", 400);
+#				return;
+#			}
+#			eval { $self->$attr($obj) };
+#			if( $@ )
+#			{
+#				$@ =~ qr(Usage:\s(.*)$)m ;
+#				$txt = $1;
+#				$self->Verbose('set: new '.$class.' got ('.$txt.') ');
+#				$request->Respond($kernel,  "Invalid: $attr !", 400);
+#				return;
+#			}
+#			$txt .= "Set ".$attr." to ".$param->{$attr}." \n";
+#			$code = 200;
+#
+#		}
+#		else
+#		{
+#			eval { $self->$attr( $param->{$attr} ) };
+#			if( $@ )
+#			{
+#				$@ =~ qr(Usage:\s(.*)$)m ;
+#				$txt = $1;
+#				$self->Verbose('set: $self->'.$attr.'( '.$param.'->{ '.
+#					$attr.' } got ( '.$txt.') ');
+#				$request->Respond($kernel,  "Invalid: $attr !", 400);
+#				return;
+#			}
+#			$txt .= "Set ".$attr." to ".$param->{$attr}." \n";
+#			$code = 200;
+#		}
+#	}
+#
+#  	if (!defined($txt) || $txt eq '' )
+#  	{
+#  		$txt = "Invalid: ".join(', ',keys %{$param} );
+#  		$code = 404;
+#  	}
+#
+#	$request->Respond($kernel, $txt, $code);
+#}
 
 =item print_context
 
@@ -2107,6 +2428,27 @@ sub _default_commands :Private {
         'contexts'  => {'ROOT' => 'ip' },
         'call_style'=> 'state',
         'handler'	=> 'net'
+    ),
+	 'Control' => Agent::TCLI::Command->new(
+        'name'      => 'Control',
+        'help' 		=> 'show or set Control variables',
+        'usage'     => 'Control show local_address',
+        'topic'     => 'admin',
+        'command' 	=> 'pre-loaded',
+        'contexts'  => {'ROOT' => 'Control' },
+        'call_style'=> 'state',
+        'handler'	=> 'establish_context'
+    ),
+	 'show' => Agent::TCLI::Command->new(
+        'name'      => 'show',
+        'help' 		=> 'show Control variables',
+        'usage'     => 'Control show local_address',
+        'topic'     => 'admin',
+        'command' 	=> 'pre-loaded',
+        'contexts'  => {'Control' => 'show' },
+        'call_style'=> 'state',
+        'handler'	=> 'establish_context'
+
     ),
 	};
 	return ( $dc );

@@ -1,4 +1,4 @@
-# $Id: XMPP.pm 54 2007-04-26 21:37:55Z hacker $
+# $Id: XMPP.pm 62 2007-05-03 15:55:17Z hacker $
 package Agent::TCLI::Transport::XMPP;
 
 =pod
@@ -34,7 +34,7 @@ use Params::Validate qw(validate_with);
 
 sub VERBOSE () { 0 }
 
-our $VERSION = '0.031.'.sprintf "%04d", (qw($Id: XMPP.pm 54 2007-04-26 21:37:55Z hacker $))[2];
+our $VERSION = '0.031.'.sprintf "%04d", (qw($Id: XMPP.pm 62 2007-05-03 15:55:17Z hacker $))[2];
 
 =head1 INTERFACE
 
@@ -78,10 +78,12 @@ my @xmpp_debug			:Field  :All('xmpp_debug');
 =item xmpp_process_time
 
 Sets the time in seconds to wait before calling XMPP Process to look for
-more XMPP data. Should be near 1.
+more XMPP data. Defaults to 1 and shouldn't be much larger.
 
 =cut
-my @xmpp_process_time			:Field  :All('xmpp_process_time');
+my @xmpp_process_time	:Field
+						:Arg('name'=>'xmpp_process_time', 'default'=> 1 )
+						:Acc('xmpp_process_time');
 
 =item peers
 
@@ -199,6 +201,7 @@ sub _preinit :Preinit {
         	    _default
         	    _child
 
+				ControlExecute
         	    Disconnected
         	    JoinPeerRooms
 				JoinChatRoom
@@ -271,14 +274,14 @@ sub _start {
 	my ($kernel,  $self, $session) =
 	  @_[KERNEL, OBJECT,  SESSION];
 
-	$self->Verbose("_start: Starting up");
-
 	# are we up before OIO has finished initializing object?
 	if (!defined( $self->alias ))
 	{
-		$kernel->delay('_start', 1 );
+		$kernel->yield('_start');
 		return;
 	}
+
+	$self->Verbose("_start: ".$self->alias." Starting up");
 
 	# OK, now we can start up POE stuff.
 	$kernel->alias_set($self->alias);
@@ -367,10 +370,15 @@ sub _shutdown :Cumulative {
 	# This is to keep from reconnectiing when XMPP responds that it is disconnected.
 	$self->connection_retries(0);
 
-	# Shut down any packages.
-	foreach my $package ( @{$self->control_options->{'packages'} })
+	if ( defined($self->control_options)
+		&& exists( $self->control_options->{'packages'}  ))
 	{
-		$kernel->post( $package->name => '_shutdown'  );
+		# Shut down any packages.
+		foreach my $package ( @{$self->control_options->{'packages'} })
+		{
+			$kernel->post( $package->name => '_shutdown'  );
+		}
+
 	}
 
 	if ( $xmpp[$$self]->Connected )
@@ -562,8 +570,11 @@ sub Online {
 		$self->set(\@roster, $self->xmpp->Roster);
 	}
 
-	$self->control_options->{'local_address'} = $self->Address
-		unless defined($self->control_options->{'local_address'});
+	if (defined($self->control_options) )
+	{
+		$self->control_options->{'local_address'} = $self->Address
+			unless defined($self->control_options->{'local_address'});
+	}
 
 	$kernel->delay_set( 'Process' => $xmpp_process_time[$$self] );
 
@@ -573,7 +584,7 @@ sub Online {
 		priority =>  '1',
     } ) );
 
-	$kernel->yield('JoinPeerRooms');
+	$kernel->yield('JoinPeerRooms') if defined($self->peers);
 
 } #end sub Online
 
@@ -822,8 +833,8 @@ sub recv_iqRequest {
 
 	my $packed_request = $msg->GetQuery->GetYaml;
 
-	$self->Verbose("recv_iqRequest: msg",1,$msg);
-	$self->Verbose("recv_iqRequest: GetRequest",1,\$msg->GetQuery->GetRequest);
+#	$self->Verbose("recv_iqRequest: msg",4,$msg);
+#	$self->Verbose("recv_iqRequest: GetRequest",3,$msg->GetQuery->GetRequest);
 
 	# Unpack the request..
 	my $request = $self->UnpackRequest($packed_request);
@@ -832,16 +843,22 @@ sub recv_iqRequest {
 	$request->unshift_sender($self->alias);
 	$request->unshift_postback('PostResponse');
 
-#	# Put message into request for easy response.
-#	$request->set_recv($msg);
-
 	my $control = $self->GetControlForNode( $msg );
+
 	return unless $control;
 
-	$self->Verbose("recv_iqRequest: sending to contol(".$control->id().") \n",2);
+	$self->Verbose("recv_iqRequest: sending to contol(".$control->id().") \n",1);
 	$self->Verbose("recv_iqRequest: control dump.... \n".$control->dump(1), 5 );
 
-	$kernel->post( $control->id() => 'Execute' => $request );
+	# Sometimes, control has not started, so we wiat if we have to.
+	if ( defined($control->start_time) )
+	{
+		$kernel->post( $control->id() => 'Execute' => $request );
+	}
+	else
+	{
+		$kernel->delay('ControlExecute' => 1 => $control, $request );
+	}
 }
 
 sub recv_iqResponse {
@@ -857,16 +874,14 @@ sub recv_iqResponse {
 	# TODO Assuming version is 1.0 for now.
 	my $packed_response = $msg->GetQuery->GetYaml;
 
-	$self->Verbose("recv_iqResponse: msg",1,$msg); #->GetRequest
-	$self->Verbose("recv_iqResponse: XMLNS",1,$msg->GetQueryXMLNS);
-	$self->Verbose("recv_iqResponse: GetQuery",1,$msg->GetQuery);
-	$self->Verbose("recv_iqResponse: GetYaml",1,$msg->GetQuery->GetYaml);
-	$self->Verbose("recv_iqResponse: GetRequest",1,\$msg->GetQuery->GetRequest);
+#	$self->Verbose("recv_iqResponse: msg",1,$msg); #->GetRequest
+#	$self->Verbose("recv_iqResponse: XMLNS",1,$msg->GetQueryXMLNS);
+#	$self->Verbose("recv_iqResponse: GetQuery",1,$msg->GetQuery);
+#	$self->Verbose("recv_iqResponse: GetYaml",1,$msg->GetQuery->GetYaml);
+#	$self->Verbose("recv_iqResponse: GetRequest",1,\$msg->GetQuery->GetRequest);
 
 	# Unpack the response..
 	my $response = $self->UnpackResponse($packed_response);
-
-#	my $request = $response->request;
 
 	# The bottom of the stack should be where to go.
 	my $sender = $response->shift_sender;
@@ -874,7 +889,7 @@ sub recv_iqResponse {
 
 	$self->Verbose("recv_iqResponse: posting to ".
 		$sender." => ".$postback." => ".$response->id);
-	$kernel->post( $sender => $postback => $response );
+	$kernel->call( $sender => $postback => $response );
 }
 
 sub PostRequest {
@@ -1050,7 +1065,7 @@ sub TransmitRequest {
 		'Yaml'		=>	$packed_request,
 	);
 
-	$self->Verbose($self->alias.":TransmitRequest: Sending to xmpp", 2);
+	$self->Verbose($self->alias.":TransmitRequest: Sending to xmpp for $addressee", 1);
 
 	$self->xmpp->Send($msg);
 
@@ -1105,7 +1120,7 @@ sub TransmitResponse {
 		'Yaml'		=>	$packed_response,
 	);
 
-	$self->Verbose("TransmitResponse: Sending to xmpp", 2);
+	$self->Verbose("TransmitResponse: Sending to xmpp for $addressee", 1);
 
 	$self->xmpp->Send($msg);
 
@@ -1303,7 +1318,11 @@ sub GetControlForNode {
 	my $control = $self->GetControl($control_id, $user->GetJID('base'), $user_protocol);
 
 	# If not auth, no control,
-	return (0) unless $control;
+	unless ($control)
+	{
+		$self->Verbose("GetControlForNode: No Control!!!!");
+		return (0);
+	};
 
     $self->Verbose( "GetControlForNode: Control ".$control_id." on input from ".$user." \n",2);
 

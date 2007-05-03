@@ -1,9 +1,10 @@
 #!/usr/bin/env perl
-# $Id: TCLI.Control.Interactive.t 54 2007-04-26 21:37:55Z hacker $
+# $Id: TCLI.Control.Interactive.t 62 2007-05-03 15:55:17Z hacker $
 
 use warnings;
 use strict;
-use Test::More tests => 44;
+use Test::More tests => 49;
+#use Test::More qw(no_plan);
 
 
 # TASK Test suite is not complete. Need more testing for catching errors.
@@ -366,9 +367,7 @@ $test_base->AddCommands(
 		Agent::TCLI::Command->new(
 	        'name'		=> 'show',
 	        'contexts'	=> {
-	        	'ROOT'			=> 'show',
-				'meganat' 	=> 'show',
-				'noresets'	=> 'show',
+				'ROOT' 	=> 'show',
 				'test1'		=> {
 					'GROUP'				=> 'show',
 					'test1.1'		=> {
@@ -483,6 +482,7 @@ is($test_base->name,'base', '$test_base->name ');
 # are we in the right place?
 $t->like_body('show name',qr(base));
 
+#$verbose = 0;
 # general tests
 $t->ok('status');
 $t->ok('hi');
@@ -490,7 +490,6 @@ $t->like_body('echo this',qr(this) );
 $t->like_body('echo that is not this',qr(that is not this) );
 $t->is_body( 'context','Context: ROOT','verify root context');
 $t->ok('debug_request');
-$t->ok('nothing');
 $t->ok('exit');
 $t->ok('root');
 $t->ok('Verbose');
@@ -515,7 +514,7 @@ $t->like_body( 'help globals',qr(global.*?exit.*?help)s, "help globals at root")
 #manual tests
 
 #$verbose = 2;
-
+#
 $t->is_code( 'manual manual',200, 'manual');
 $t->is_code( '/',200, 'root context');
 $t->is_body( 'context','Context: ROOT','verify root context');
@@ -528,6 +527,16 @@ $t->like_body( 'manual test1.1.1',qr(help for command)s, "manual gives help when
 $t->like_body( 'manual manual',qr(manual command provides detailed)s, "manual for global in context");
 $t->like_body( 'exit',qr(Context now: test1),"exit ok" );
 $t->is_body( 'exit','Context now: ROOT', 'exit Context now: root');
+$test_master->done;
+
+# Control tests
+$t->ok('Control show user');
+is($t->get_param('id','',1),'test-master@localhost', 'test user check');
+$t->ok('Control show auth');
+is($t->get_param('auth','',1),'master', 'test auth check');
+$t->ok('Control show local_address');
+is($t->get_param('address','',1),'127.0.0.1', 'test local_address check');
+
 
 $test_master->run;
 

@@ -1,6 +1,6 @@
 package Agent::TCLI;
 #
-# $Id: TCLI.pm 59 2007-04-30 11:24:24Z hacker $
+# $Id: TCLI.pm 64 2007-05-03 18:05:09Z hacker $
 #
 =head1 NAME
 
@@ -19,7 +19,7 @@ The documentation still needs much more improvement.
 
 =cut
 
-our $VERSION = '0.031';
+our $VERSION = '0.032';
 
 =head1 SYNOPSIS
 

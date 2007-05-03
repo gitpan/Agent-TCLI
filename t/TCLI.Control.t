@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-# $Id: TCLI.Control.t 49 2007-04-25 10:32:36Z hacker $
+# $Id: TCLI.Control.t 62 2007-05-03 15:55:17Z hacker $
 
 use warnings;
 use strict;
@@ -115,22 +115,22 @@ my @obj_cmds = (
 	        'handler'	=> 'all',
 		),
 		Agent::TCLI::Command->new(
-	        'name'		=> 'show',
+	        'name'		=> 'tshow',
 	        'contexts'	=> {
-				'meganat' 	=> 'show',
-				'noresets'	=> 'show',
+				'meganat' 	=> 'tshow',
+				'noresets'	=> 'tshow',
 				'test1'		=> {
-					'GROUP'				=> 'show',
+					'GROUP'				=> 'tshow',
 					'test1.1'		=> {
-						'test1.1.1'		=> 'show',
-						'test1.1.2'		=> 'show',
-						'test1.1.3'		=> 'show',
+						'test1.1.1'		=> 'tshow',
+						'test1.1.2'		=> 'tshow',
+						'test1.1.3'		=> 'tshow',
 						},
 					'test1.2'		=> {
-						'GROUP'		=> 'show',
+						'GROUP'		=> 'tshow',
 						},
 					'test1.3'		=> {
-						'GROUP'		=> 'show',
+						'GROUP'		=> 'tshow',
 						},
 					},
 				},
@@ -523,15 +523,15 @@ foreach my $test ( @cmds )
 }
 # Need to test show in universal locations.
 my @input = (
-[qw( test1 test1.1 show ) ],
-[qw( test1 test1.2 show ) ],
-[qw( test1 test1.3 show ) ],
-[qw( test1 test1.1 test1.1.1 show ) ],
-[qw( test1 test1.1 test1.1.2 show ) ],
-[qw( test1 test1.1 test1.1.3 show ) ],
-[qw( test1 test1.2 test1.1.1 show ) ],
-[qw( test1 test1.2 test1.1.2 show ) ],
-[qw( test1 test1.2 test1.1.3 show ) ],
+[qw( test1 test1.1 tshow ) ],
+[qw( test1 test1.2 tshow ) ],
+[qw( test1 test1.3 tshow ) ],
+[qw( test1 test1.1 test1.1.1 tshow ) ],
+[qw( test1 test1.1 test1.1.2 tshow ) ],
+[qw( test1 test1.1 test1.1.3 tshow ) ],
+[qw( test1 test1.2 test1.1.1 tshow ) ],
+[qw( test1 test1.2 test1.1.2 tshow ) ],
+[qw( test1 test1.2 test1.1.3 tshow ) ],
 );
 $test1->context( 'ROOT' );
 foreach my $args ( @input )
@@ -540,7 +540,7 @@ foreach my $args ( @input )
 	($tcmd,$preargs,$ttxt) = $test1->FindCommand($args);
 	$test1->Verbose( " tcmd(".$tcmd->name.") ttxt($ttxt) context(".$test1->print_context.") preargs dump \n",1,$preargs);
 	is($ttxt,'', 'Found cmd '.join(' ', @targs ) );
-	is($tcmd->name,'show', 'Name is show ' );
+	is($tcmd->name,'tshow', 'Name is tshow ' );
 }
 
 # Need to test exit in universally
